@@ -1,0 +1,161 @@
+#!/usr/bin/env python3
+
+def c_str_lit(s):
+    if s is None:
+        return '""'
+    escaped = ''
+    for c in s:
+        if ord(c) < 32:
+            escaped += '\\' + oct(ord(c))[2:]
+        else:
+            if c in '"\'?\\':
+                escaped += '\\' + c
+            else:
+                escaped += c
+    return f'"{escaped}"'
+
+import json
+
+j = json.load(open('schedule.json'))
+
+ignore_fields = set([
+    'video', 'is_fave', 'user_id', 'source', 'map_link', 'type', 'link', 'slug', 'is_from_cfp', 'id' 
+])
+
+fields = {}
+
+ftype = {
+    # easy ones
+    'may_record': 'bool',
+    'is_family_friendly': 'bool',
+    'pronouns': 'str',
+    'equipment': 'str',
+    'cost': 'str',
+    'age_range': 'str',
+    'speaker': 'str',
+    'venue': 'str',
+    'description': 'str',
+    'attendees': 'str',
+    'content_note': 'str',
+    'title': 'str',
+    
+    # Special ones
+    'start_time':'st',
+    'end_time':'et',
+    'start_date':'sd',
+    'end_date':'ed',
+    'latlon': 'll'
+}
+
+types = {
+    'workshop':('workshop', 'Workshop'),
+    'talk':('talk', 'Talk'),
+    'performance':('performance', 'Performance'),
+    'youthworkshop':('workshop', 'Workshop'),
+}
+
+to_generate = []
+items = {}
+
+for i in j:
+    ty = i.get('type')
+    if ty is None:
+        print("// WARNING: skipped entry with missing type")
+        continue
+    to_generate.append(i)
+    
+    names = types.get(ty)
+    if names is None:
+        print(f"// WARNING: Skipped unknown event type: {n}")
+        continue
+    eid, displayname = names
+
+    if eid not in items:
+        items[eid] = []
+    f = i.keys()
+    if ty not in fields:
+        fields[ty] = set()
+    for n in f:
+        if n not in ignore_fields:
+            fields[ty].add(n)
+    
+done = set()
+for n, v in fields.items():
+    names = types.get(n)
+    if names is None:
+        print(f"// WARNING: Skipped unknown event type: {n}")
+        continue
+    eid, displayname = names
+    if eid in done:
+        continue
+    done.add(eid)
+    print("typedef struct {")
+    for f in v:
+        t = ftype.get(f)
+        if t is None:
+            print(f"    // WARNING: Skipped unknown field: {f}")
+            continue
+        if t == 'str':
+            print(f"    char *{f};")
+            continue
+        if t == 'int':
+            print(f"    int {f};")
+            continue
+        if t =='ll':
+            print(f"    // TODO latlong")
+            continue
+        if t =='st':
+            print(f"    // TODO starttime")
+            continue
+        if t =='et':
+            print(f"    // TODO endtime")
+            continue
+        if t =='bool':
+            print(f"    char {f};")
+            continue
+        if t not in {'sd', 'ed'}:
+            print(f"    // WARNING: Unknown type: {t}, skipped this field")
+    print(f"}} sched_{eid}_t;\n")
+
+
+for item in to_generate:
+    ty = item['type']
+    names = types.get(ty)
+    if names is None:
+        print(f"// WARNING: Skipped unknown event type: {n}")
+        continue
+    eid, displayname = names
+    text = f"    {{\n"
+    for k, v in item.items():
+        t = ftype.get(k)
+        if k in ignore_fields:
+            continue
+        if t is None:
+            text += f"         // WARNING: Skipped unknown field: {f}\n"
+            continue
+        if t == 'str':
+            text += f"        .{k} = {c_str_lit(v)},\n"
+            continue
+        if t == 'int':
+            v = int(v)
+            text += f"        .{k} = {v},\n"
+            continue
+        if t =='ll':
+            continue
+        if t =='st':
+            continue
+        if t =='et':
+            continue
+        if t =='bool':
+            text += f"        .{k} = {1 if v else 0},\n"
+            continue
+        if t not in {'sd', 'ed'}:
+            text += f"        // WARNING: Unknown type: {t}, skipped this field\n"
+    text += f"    }},\n"
+    items[eid].append(text)
+    
+for ty, l in items.items():
+    print(f"sched_{ty}_t evs_{ty}[] = {{",)
+    for i in l:
+        print(i)
+    print(f"}};\n",)
