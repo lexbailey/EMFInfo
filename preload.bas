@@ -1,0 +1,4 @@
+1 CLEAR 32767
+2 PRINT "Loading program..."
+3 LOAD "EMFI_BIN" CODE
+18 LET a=USR 32768
