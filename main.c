@@ -27,7 +27,7 @@
 #define MODE_TIMETABLE (1)
 #define MODE_MAP (2)
 
-#ifdef TARGET_ZX_SPEC48
+#ifdef TARGET_ZXSPEC48
 int strlen(char *t){
     int result = 0;
     while (*t++ != '\0'){

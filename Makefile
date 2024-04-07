@@ -9,9 +9,11 @@ bin2tap/bin2tap: bin2tap/bin2tap.hs
 	cd bin2tap && $(MAKE) bin2tap
 
 main.zxspec48.bin: main.c crt0.s
-	sdasz80 -l -o -s -g -j -y -a crt0.s
+	sdasz80 -l -o -s -g -j -y -a crt0.s 
 	sdcc -c --no-std-crt0 --std-c23 -D TARGET_ZXSPEC48 -mz80 $<
-	sdldz80 -u -m -i main.ihx crt0.rel -b _GS_INIT=s__HEADER+l__HEADER
+	./gen_zxspec_link_script
+	#sdldz80 -u -m -i main.ihx crt0.rel main.rel 
+	sdldz80 -f zxspec48.lnk
 	makebin -s 65535 -o 0x8000 -p main.ihx $@
 
 %.tap: %.bas bas2tap/bas2tap
