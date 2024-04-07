@@ -2,8 +2,8 @@
 
 set -e
 
-grep ^A crt0.rel |  sed 's/A \([^ ]\+\) size \([0-9]\+\) flags [0-9]\+ addr.*/\1 \2/' > crt0_areas
-grep ^A main.rel |  sed 's/A \([^ ]\+\) size \([0-9]\+\) flags [0-9]\+ addr.*/\1 \2/' > main_areas
+grep ^A crt0.rel |  sed 's/A \([^ ]\+\) size \([0-9a-fA-F]\+\) flags [0-9a-fA-F]\+ addr.*/\1 \2/' > crt0_areas
+grep ^A main.rel |  sed 's/A \([^ ]\+\) size \([0-9a-fA-F]\+\) flags [0-9a-fA-F]\+ addr.*/\1 \2/' > main_areas
 
 LNK=zxspec48.lnk
 echo "-u" > $LNK
@@ -20,7 +20,7 @@ crt0=sizes('crt0_areas')
 main=sizes('main_areas')
 allareas = crt0.copy()
 allareas.update(main)
-areas = ['HEADER' , 'HEADER0' , 'CODE' , 'DATA' , 'INITIALIZED' , 'DABS' , 'HOME' , 'GSINIT' , 'GSFINAL' , 'INITIALIZER' , 'CABS']
+areas = ['HEADER' , 'HEADER0' , 'CODE' , 'DATA' , 'INITIALIZED' , 'DABS' , 'HOME' , 'BEFORE_GS_INIT', 'GSINIT' , 'GSFINAL' , 'AFTER_GS_INIT', 'INITIALIZER' , 'CABS']
 start = 0x8000
 for name in areas:
     if not name.startswith('HEADER'):
