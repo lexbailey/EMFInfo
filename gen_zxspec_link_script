@@ -22,9 +22,16 @@ allareas = crt0.copy()
 allareas.update(main)
 areas = ['HEADER' , 'HEADER0' , 'CODE' , 'DATA' , 'INITIALIZED' , 'DABS' , 'HOME' , 'BEFORE_GS_INIT', 'GSINIT' , 'GSFINAL' , 'AFTER_GS_INIT', 'INITIALIZER' , 'CABS']
 start = 0x8000
+init = 0
 for name in areas:
     if not name.startswith('HEADER'):
-        print(f'-b _{name}={hex(start)}')
+        if name == 'INITIALIZER':
+            print(f'-b _{name}={hex(init)}')
+            continue
+        else:
+            print(f'-b _{name}={hex(start)}')
+            if name == 'INITIALIZED':
+                init = start
     start += allareas[name]
 EOF
 

@@ -1,0 +1,12 @@
+*.rst
+*.lst
+*.tap
+*.rel
+*.o
+*.bin
+*.ihx
+*.map
+*.sym
+emfinfo_linux
+main.asm
+*.lnk

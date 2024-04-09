@@ -1,161 +1,71 @@
 #!/usr/bin/env python3
 
-def c_str_lit(s):
-    if s is None:
-        return '""'
-    escaped = ''
-    for c in s:
-        if ord(c) < 32:
-            escaped += '\\' + oct(ord(c))[2:]
-        else:
-            if c in '"\'?\\':
-                escaped += '\\' + c
-            else:
-                escaped += c
-    return f'"{escaped}"'
+# Program that is run at build time to extract information from the schedule.json
+# file and generate metadata about it to include in C code, and to generate binary
+# files with the compressed schedule data in it
 
 import json
+from datetime import datetime
 
-j = json.load(open('schedule.json'))
+j = json.loads(open('schedule.json').read())
 
-ignore_fields = set([
-    'video', 'is_fave', 'user_id', 'source', 'map_link', 'type', 'link', 'slug', 'is_from_cfp', 'id' 
-])
+print(j[0])
 
-fields = {}
+inc = open('schedule.h', 'w+')
 
-ftype = {
-    # easy ones
-    'may_record': 'bool',
-    'is_family_friendly': 'bool',
-    'pronouns': 'str',
-    'equipment': 'str',
-    'cost': 'str',
-    'age_range': 'str',
-    'speaker': 'str',
-    'venue': 'str',
-    'description': 'str',
-    'attendees': 'str',
-    'content_note': 'str',
-    'title': 'str',
+n_events = len(j)
+
+def parsedate(d):
+    return datetime.strptime(d, '%Y-%m-%d %H:%M:%S')
+
+def starttime(j):
+    return parsedate(j.get('start_date'))
+
+def endtime(j):
+    return parsedate(j.get('end_date'))
+
+class EvList:
+
+    def __init__(self, j):
+        self.pronouns_list = []
+        self.venue_list = []
+        self.type_list = []
+        self.earliest = None
+        self.latest = None
+        self.evs = []
+        
+        for ev in j:
+            if 'pronouns' in ev:
+                p = ev.get('pronouns')
+                if p not in self.pronouns_list:
+                    self.pronouns_list.append(p)
+            if 'venue' in ev:
+                p = ev.get('venue')
+                if p not in self.venue_list:
+                    self.venue_list.append(p)
+            if 'type' in ev:
+                p = ev.get('type')
+                if p not in self.type_list:
+                    self.type_list.append(p)
+            start = starttime(ev)
+            end = endtime(ev)
+            if self.earliest is None or start < self.earliest:
+                self.earliest = start
+            if self.latest is None or end > self.latest:
+                self.latest = end
+
+        print(len(self.pronouns_list))
+        print(len(self.venue_list))
+        print(len(self.type_list))
+
     
-    # Special ones
-    'start_time':'st',
-    'end_time':'et',
-    'start_date':'sd',
-    'end_date':'ed',
-    'latlon': 'll'
-}
+        
 
-types = {
-    'workshop':('workshop', 'Workshop'),
-    'talk':('talk', 'Talk'),
-    'performance':('performance', 'Performance'),
-    'youthworkshop':('workshop', 'Workshop'),
-}
+evs = EvList(j)
 
-to_generate = []
-items = {}
+inc.write(f'#ifndef SCHEDULE_H_INCLUDE\n')
+inc.write(f'#define SCHEDULE_H_INCLUDE\n')
 
-for i in j:
-    ty = i.get('type')
-    if ty is None:
-        print("// WARNING: skipped entry with missing type")
-        continue
-    to_generate.append(i)
-    
-    names = types.get(ty)
-    if names is None:
-        print(f"// WARNING: Skipped unknown event type: {n}")
-        continue
-    eid, displayname = names
+inc.write(f'#define SCHED_N_EVENTS ({n_events})\n')
 
-    if eid not in items:
-        items[eid] = []
-    f = i.keys()
-    if ty not in fields:
-        fields[ty] = set()
-    for n in f:
-        if n not in ignore_fields:
-            fields[ty].add(n)
-    
-done = set()
-for n, v in fields.items():
-    names = types.get(n)
-    if names is None:
-        print(f"// WARNING: Skipped unknown event type: {n}")
-        continue
-    eid, displayname = names
-    if eid in done:
-        continue
-    done.add(eid)
-    print("typedef struct {")
-    for f in v:
-        t = ftype.get(f)
-        if t is None:
-            print(f"    // WARNING: Skipped unknown field: {f}")
-            continue
-        if t == 'str':
-            print(f"    char *{f};")
-            continue
-        if t == 'int':
-            print(f"    int {f};")
-            continue
-        if t =='ll':
-            print(f"    // TODO latlong")
-            continue
-        if t =='st':
-            print(f"    // TODO starttime")
-            continue
-        if t =='et':
-            print(f"    // TODO endtime")
-            continue
-        if t =='bool':
-            print(f"    char {f};")
-            continue
-        if t not in {'sd', 'ed'}:
-            print(f"    // WARNING: Unknown type: {t}, skipped this field")
-    print(f"}} sched_{eid}_t;\n")
-
-
-for item in to_generate:
-    ty = item['type']
-    names = types.get(ty)
-    if names is None:
-        print(f"// WARNING: Skipped unknown event type: {n}")
-        continue
-    eid, displayname = names
-    text = f"    {{\n"
-    for k, v in item.items():
-        t = ftype.get(k)
-        if k in ignore_fields:
-            continue
-        if t is None:
-            text += f"         // WARNING: Skipped unknown field: {f}\n"
-            continue
-        if t == 'str':
-            text += f"        .{k} = {c_str_lit(v)},\n"
-            continue
-        if t == 'int':
-            v = int(v)
-            text += f"        .{k} = {v},\n"
-            continue
-        if t =='ll':
-            continue
-        if t =='st':
-            continue
-        if t =='et':
-            continue
-        if t =='bool':
-            text += f"        .{k} = {1 if v else 0},\n"
-            continue
-        if t not in {'sd', 'ed'}:
-            text += f"        // WARNING: Unknown type: {t}, skipped this field\n"
-    text += f"    }},\n"
-    items[eid].append(text)
-    
-for ty, l in items.items():
-    print(f"sched_{ty}_t evs_{ty}[] = {{",)
-    for i in l:
-        print(i)
-    print(f"}};\n",)
+inc.write(f'#endif /*SCHEDULE_H_INCLUDE*/\n')

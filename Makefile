@@ -10,9 +10,8 @@ bin2tap/bin2tap: bin2tap/bin2tap.hs
 
 main.zxspec48.bin: main.c crt0.s
 	sdasz80 -l -o -s -g -j -y -a crt0.s 
-	sdcc -c --no-std-crt0 --std-c23 -D TARGET_ZXSPEC48 -mz80 $<
+	sdcc -c --no-std-crt0 --std-c23 -D TARGET_ZXSPEC48 -mz80 --reserve-regs-iy $<
 	./gen_zxspec_link_script
-	#sdldz80 -u -m -i main.ihx crt0.rel main.rel 
 	sdldz80 -f zxspec48.lnk
 	makebin -s 65535 -o 0x8000 -p main.ihx $@
 
@@ -22,21 +21,20 @@ main.zxspec48.bin: main.c crt0.s
 #%.bin.tap: %.bin bin2tap/bin2tap
 #	bin2tap/bin2tap 0x8000 $< $<
 
-main.zxspec48.bin.tap: main.zxspec48.bin
+main.zxspec48.bin.tap: main.zxspec48.bin bin2tap/bin2tap
 	bin2tap/bin2tap 0x8000 "EMFI_BIN" $<
 
-full.tap: preload.tap main.zxspec48.bin.tap
+emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap
 	cat $^ > $@
 
 %.wav: %.tap
 	tape2wav $< $@
 
-emfinfo.elf: main.c sched_explore.c
+emfinfo_linux: main.c
 	cc -DTARGET_PC_LINUX -c main.c -o main.o
-	cc -DTARGET_PC_LINUX -c sched_explore.c -o sched_explore.o
-	cc -o $@ main.o sched_explore.o
+	cc -o $@ main.o
 
-all: full.wav emfinfo.elf
+all: emfinfo_zxspec48.tap emfinfo_linux
 
 clean:
 	-rm -f *.wav *.tap *.lst *.bin *.lst *.map *.ihx *.rst *.rel *.sym *.mem *.noi *.lk
