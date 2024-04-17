@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <stdint.h>
 #endif
 
 // To port this to another system, add extra TARGET option checks here
@@ -28,12 +29,123 @@
 #define MODE_TIMETABLE (1)
 #define MODE_MAP (2)
 #define MODE_TIMETABLE_LIST (3)
+#define MODE_EVENT_DETAIL (5)
+
+#define MODE_EXIT (-1)
+
+#define EVTYPE_TALK (0)
+#define EVTYPE_PERFORMANCE (1)
+#define EVTYPE_WORKSHOP (2)
+#define EVTYPE_YOUTHWORKSHOP (3)
+
+char *evstr[] = {
+    "Talk", "Performance", "Workshop", "Youth Workshop"
+};
 
 #include "schedule.h"
 
 char filt_day = 0x0;
 char filt_type = 0xff;
 char filt_title = 0;
+
+int evs_loaded = 0;
+int strings_loaded = 0;
+
+typedef struct {
+    unsigned char type;
+    unsigned char can_record;
+    unsigned int time;
+    unsigned char duration;
+    char *title;
+    char *venue;
+    char *name;
+    char *pronouns;
+    char *cost;
+    char *descr;
+} event_t;
+
+#ifdef TARGET_ZXSPEC48
+char *events_base = (char *)0x9000;
+char *strings_base = 0x9000 + EVENTS_LEN;
+#endif
+#ifdef TARGET_PC_LINUX
+uint8_t events_base[EVENTS_LEN];
+uint8_t strings_base[STRINGS_LEN];
+#endif
+
+#ifdef TARGET_PC_LINUX
+int load_data(void* p, size_t len, char *fname){
+    FILE *f = fopen(fname, "rb");
+    if (f == NULL){
+        return 0;
+    }
+    size_t r = fread(p, 1, len, f);
+    if (r != len){
+        return 0;
+    }
+    return 1;
+}
+#endif
+
+unsigned int bitstream_get(char **ptr, signed char *bpos, char bits){
+    char rembits = bits;
+    unsigned int outval = 0;
+    while (rembits) {
+        outval = (outval << 1) | (*ptr[0] >> *bpos & 1);
+        *bpos -= 1;
+        if (*bpos < 0){
+            *bpos = 7;
+            *ptr += 1;
+        }
+        rembits --;
+    }
+    return outval;
+}
+
+event_t get_event(int index){
+    #define CBITS(n) ((char)(bitstream_get(&p, &bpos, n)))
+    #define IBITS(n) (bitstream_get(&p, &bpos, n))
+    char str_bit_len = events_base[0];
+    char big_str_bit_len = events_base[0]; // todo, pack this elsewhere
+    char *p = events_base + 1 + (index * EV_SIZE);
+    char bpos = 7;
+    event_t ev;
+    ev.type = CBITS(2);
+    ev.can_record = CBITS(1);
+    ev.time = IBITS(13);
+    ev.duration = IBITS(8);
+    ev.title = strings_base + IBITS(str_bit_len);
+    ev.venue = strings_base + IBITS(str_bit_len);
+    ev.name = strings_base + IBITS(str_bit_len);
+    ev.pronouns = strings_base + IBITS(str_bit_len);
+    ev.cost = strings_base + IBITS(str_bit_len);
+    ev.descr = strings_base + IBITS(big_str_bit_len);
+    return ev;
+    #undef CBITS
+    #undef IBITS
+}
+
+#ifdef TARGET_ZXSPEC48
+int load_data(void* p, unsigned int len){
+    p; // hl contains p
+    len; // de contains len
+    __asm__(
+        "push ix\n\t"
+        "ld a, #0xff\n\t" // loading a block
+        "scf\n\t" // set carry flag to indicate load (not verify)
+        "push hl\n\t" // start addr into ix
+        "pop ix\n\t"
+        "call 0x0556\n\t"
+        "pop ix\n\t"
+        "ld de, #1\n\t"
+        "jr c, loadsuccess\n\t"
+        "ld de, #0\n\t"
+        "loadsuccess:\n\t"
+        "ret\n\t"
+    );
+    return 0;
+}
+#endif
 
 #ifdef TARGET_ZXSPEC48
 int strlen(char *t){
@@ -161,6 +273,7 @@ void text(char *t){
 volatile char n2[5];
 void num_text(int n){
     #ifdef TARGET_ZXSPEC48
+    n;
     __asm__(
         "push de\n\t"
         "push bc\n\t"
@@ -211,7 +324,7 @@ char get_key_press(){
     #ifdef TARGET_PC_LINUX
     return getc(stdin);
     #endif
-    return '\0';
+    //return '\0';
 }
 
 char menu(int changed, char key){
@@ -230,14 +343,79 @@ char menu(int changed, char key){
     if (key == 'M' || key == 'm'){
         return MODE_MAP;
     }
+    #ifdef TARGET_PC_LINUX
+    if (key == 'Q' || key == 'q'){
+        printf("exit now\n");
+        return MODE_EXIT;
+    }
+    #endif
     return MODE_MAIN_MENU;
+}
+
+void time_text(unsigned int time){
+}
+
+void duration_text(unsigned char dur){
+    char hr = 0;
+    while (dur >= 60){
+        dur -= 60;
+        hr += 1;
+    }
+    num_text(hr);
+    text("hrs");
+    if (dur > 0){
+        text(",");
+        num_text((char)dur);
+        text("mins");
+    }
+}
+
+int ev_id = 0;
+
+char event_detail(int changed, char key){
+    if (changed) {
+        clear();
+        event_t ev;
+        ev = get_event(ev_id); // can't do this on the same as the above line, SDCC bug #3121
+        curpos(0,0);
+        text(evstr[ev.type]);
+        text(":");
+        text(ev.title);
+
+        curpos(0,2);
+        text("By ");
+        text(ev.name);
+        curpos(0,3);
+        text("(");
+        text(ev.pronouns);
+        text(")");
+
+        curpos(0,4);
+        text("At ");
+        text(ev.venue);
+
+        curpos(0,5);
+        text("From ");
+        time_text(ev.time);
+        text(" for ");
+        duration_text(ev.duration);
+
+        if (ev.type != EVTYPE_TALK){
+            curpos(0,6);
+            text("Cost: ");
+            text(ev.cost);
+        }
+
+    }
+    if (key == 'Q' || key == 'q'){ return MODE_TIMETABLE_LIST; }
+    return MODE_EVENT_DETAIL;
 }
 
 char timetable_list(int changed, char key){
     static int page = 1;
     static int n_pages = 1;
     if (changed){
-        n_pages = SCHED_N_EVENTS/10;
+        n_pages = (SCHED_N_EVENTS/10)+1;
         clear();
         curpos(0,0);
         text("EMF Timetable (");
@@ -254,9 +432,16 @@ char timetable_list(int changed, char key){
         text("/");
         num_text(n_pages);
         for (char i = 0; i < 10; i++){
+            int index = ((page-1) * 10) + i;
+            if (index >= SCHED_N_EVENTS){
+                break;
+            }
+            event_t ev;
+            ev = get_event(index); // can't do this on the same as the above line, SDCC bug #3121
             curpos(0,2+(i*2));
             num_text(i);
             text(":");
+            text(ev.title);
         }
         curpos(10,1);
         text("N:Next,P:Prev,Q:Back");
@@ -274,6 +459,10 @@ char timetable_list(int changed, char key){
             page = n_pages;
         }
         timetable_list(1,'\0');
+    }
+    if (key >= '0' && key <= '9'){
+        ev_id = ((page-1) * 10) + key - '0';
+        return MODE_EVENT_DETAIL;
     }
     if (key == 'Q' || key == 'q'){ return MODE_TIMETABLE; }
     return MODE_TIMETABLE_LIST;
@@ -324,11 +513,34 @@ char map(int changed, char key){
 }
 
 int main(){
-    #ifdef TARGET_PC_LINUX
-    atexit(cleanup);
-    signal(SIGINT, interrupt);
-    #endif
     init_text();
+    clear();
+    #ifdef TARGET_PC_LINUX
+        atexit(cleanup);
+        signal(SIGINT, interrupt);
+        evs_loaded = load_data(events_base, EVENTS_LEN, "evlist.bin");
+        strings_loaded = load_data(strings_base, STRINGS_LEN, "strngs.bin");
+        if (!evs_loaded || !strings_loaded){
+            curpos(0,0);
+            text("Error: Unable to load data");
+        }
+    #endif
+    #ifdef TARGET_ZXSPEC48
+        evs_loaded = load_data(events_base, EVENTS_LEN);
+        if (! evs_loaded){
+            curpos(0,0);
+            text("Error loading events");
+            curpos(0,1);
+            text("will retry later...");
+        }
+        strings_loaded = load_data(strings_base, STRINGS_LEN);
+        if (! strings_loaded){
+            curpos(0,2);
+            text("Error loading strings");
+            curpos(0,3);
+            text("will retry later...");
+        }
+    #endif
     int lastmode = -1;
     while (1){
         int changed = lastmode != mode;
@@ -342,6 +554,32 @@ int main(){
             case MODE_TIMETABLE: mode = timetable(changed, c); break;
             case MODE_MAP: mode = map(changed, c); break;
             case MODE_TIMETABLE_LIST: mode = timetable_list(changed, c); break;
+            case MODE_EVENT_DETAIL: mode = event_detail(changed, c); break;
         }
+        #ifdef TARGET_PC_LINUX
+            if (mode == MODE_EXIT){
+                return 0;
+            }
+        #endif
     }
 }
+
+/*
+int main(){
+	init_text();
+	clear();
+	curpos(0,0);
+	text("Hello world! ");
+	num_text(1234);
+	curpos(0,1);
+	text("Press a key");
+	curpos(0,2);
+	char c = get_key_press();
+	text("you pressed: ");
+	char cs[2];
+	cs[0] = c;
+	cs[1] = 0;
+	text(cs);
+	return 0;
+}
+*/

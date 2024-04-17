@@ -55,7 +55,7 @@ def compact(bits):
     return bytes(bytes_)
 
 def make_event(f, title, venue, name, pronouns, cost, time, duration, type_, can_record):
-    f.write(b'\x00\x00') # type, can_record, time
+    f.write(bytes([type_ << 6,0])) # type, can_record, time
     f.write(bytes([duration])) # one hour long event
     b = str_id_bits()
     bits = []
@@ -69,6 +69,7 @@ def make_event(f, title, venue, name, pronouns, cost, time, duration, type_, can
     f.write(bytes([0,0])) # a bit of padding for the description pointer, currently ignored
 
 with open("evlist.bin", 'wb+') as f:
+    f.write(bytes([str_id_bits()]))
     make_event(f, title, venue, name, pronouns, cost, 0, 60, 0, 1)
     make_event(f, title2, venue2, name2, pronouns2, cost2, 120, 120, 2, 0)
 
