@@ -1,10 +1,12 @@
 
+#define STORAGE_MEDIUM "disk"
 
 #ifdef TARGET_ZXSPEC48
 #define __TARGET_KNOWN
 #ifndef __SDCC_z80
 #error "The ZX Spectrum 48k target must be compiled with -mz80"
 #endif
+#define STORAGE_MEDIUM "tape"
 #define LAST_K (*((char*)(23560)))
 #endif
 
@@ -30,6 +32,7 @@
 #define MODE_MAP (2)
 #define MODE_TIMETABLE_LIST (3)
 #define MODE_EVENT_DETAIL (5)
+#define MODE_LOAD_EVS (6)
 
 #define MODE_EXIT (-1)
 
@@ -73,20 +76,6 @@ uint8_t events_base[EVENTS_LEN];
 uint8_t strings_base[STRINGS_LEN];
 #endif
 
-#ifdef TARGET_PC_LINUX
-int load_data(void* p, size_t len, char *fname){
-    FILE *f = fopen(fname, "rb");
-    if (f == NULL){
-        return 0;
-    }
-    size_t r = fread(p, 1, len, f);
-    if (r != len){
-        return 0;
-    }
-    return 1;
-}
-#endif
-
 unsigned int bitstream_get(char **ptr, signed char *bpos, char bits){
     char rembits = bits;
     unsigned int outval = 0;
@@ -124,28 +113,6 @@ event_t get_event(int index){
     #undef CBITS
     #undef IBITS
 }
-
-#ifdef TARGET_ZXSPEC48
-int load_data(void* p, unsigned int len){
-    p; // hl contains p
-    len; // de contains len
-    __asm__(
-        "push ix\n\t"
-        "ld a, #0xff\n\t" // loading a block
-        "scf\n\t" // set carry flag to indicate load (not verify)
-        "push hl\n\t" // start addr into ix
-        "pop ix\n\t"
-        "call 0x0556\n\t"
-        "pop ix\n\t"
-        "ld de, #1\n\t"
-        "jr c, loadsuccess\n\t"
-        "ld de, #0\n\t"
-        "loadsuccess:\n\t"
-        "ret\n\t"
-    );
-    return 0;
-}
-#endif
 
 #ifdef TARGET_ZXSPEC48
 int strlen(char *t){
@@ -285,7 +252,7 @@ void num_text(int n){
         "ld hl, #_n2\n\t"
         // First byte is 0 to indicate integer number
         "ld (hl), #0\n\t"
-        // Next byte is 0 to indicate positive number
+        // Next byte is 0 to indicate positive number TODO does this need to support negatives?
         "inc hl\n\t"
         "ld (hl), #0\n\t"
         // Next two bytes are the number, from de
@@ -327,6 +294,102 @@ char get_key_press(){
     //return '\0';
 }
 
+#ifdef TARGET_ZXSPEC48
+    int load_data_block(void* p, unsigned int len){
+        p; // hl contains p
+        len; // de contains len
+        __asm__(
+            "push ix\n\t"
+            "ld a, #0xff\n\t" // loading a block
+            "scf\n\t" // set carry flag to indicate load (not verify)
+            "push hl\n\t" // start addr into ix
+            "pop ix\n\t"
+            "call 0x0556\n\t"
+            "pop ix\n\t"
+            "ld de, #1\n\t"
+            "jr c, db_loadsuccess\n\t"
+            "ld de, #0\n\t"
+            "db_loadsuccess:\n\t"
+            "ret\n\t"
+        );
+        return 0;
+    }
+    
+    int load_header(void* p){
+        p; // hl contains p
+        __asm__(
+            "push ix\n\t"
+            "ld a, #0x00\n\t" // loading a header
+            "scf\n\t" // set carry flag to indicate load (not verify)
+            "push hl\n\t" // start addr into ix
+            "pop ix\n\t"
+            "ld de, #17\n\t"
+            "call 0x0556\n\t"
+            "pop ix\n\t"
+            "ld de, #1\n\t"
+            "jr c, h_loadsuccess\n\t"
+            "ld de, #0\n\t"
+            "h_loadsuccess:\n\t"
+            "ret\n\t"
+        );
+        return 0;
+    }
+    
+    int load_data(void *p, unsigned int len, char *name){
+        text("\r");
+        while (1){
+            int ret = load_header(p);
+            if (ret == 2){
+                return 0;
+            }
+            if (ret != 1){
+                text("skip\r");
+                continue;
+            }
+            int rlen = ((int)(((char*)p)[11])) | (((int)(((char *)p)[12]))<<8);
+            ((char*)p)[11] = '\0';
+            if (rlen != len){
+                text("skip: ");
+                text(((char *)p)+1);
+                text("\r");
+                continue;
+            }
+            char match = 1;
+            for (int i = 0; i<strlen(name); i++){
+                if (name[i] != ((char*)p)[1+i]){
+                    match = 0;
+                    break;
+                }
+            }
+            if (!match){
+                text("skip: ");
+                text(((char *)p)+1);
+                text("\r");
+                continue;
+            }
+            text("found: ");
+            text(((char *)p)+1);
+            text("\r");
+            break;
+        }
+        return load_data_block(p, len);
+    }
+#endif
+
+#ifdef TARGET_PC_LINUX
+    int load_data(void* p, size_t len, char *fname){
+        FILE *f = fopen(fname, "rb");
+        if (f == NULL){
+            return 0;
+        }
+        size_t r = fread(p, 1, len, f);
+        if (r != len){
+            return 0;
+        }
+        return 1;
+    }
+#endif
+
 char menu(int changed, char key){
     if (changed){
         clear();
@@ -336,12 +399,21 @@ char menu(int changed, char key){
         text("T - Timetable");
         curpos(1,3);
         text("M - Map");
+        if (!evs_loaded){
+            curpos(1,4);
+            text("E - Load event data from " STORAGE_MEDIUM);
+        }
     }
     if (key == 'T' || key == 't'){
         return MODE_TIMETABLE;
     }
     if (key == 'M' || key == 'm'){
         return MODE_MAP;
+    }
+    if (!evs_loaded){
+        if (key == 'E' || key == 'e'){
+            return MODE_LOAD_EVS;
+        }
     }
     #ifdef TARGET_PC_LINUX
     if (key == 'Q' || key == 'q'){
@@ -400,8 +472,16 @@ char event_detail(int changed, char key){
         text(" for ");
         duration_text(ev.duration);
 
+        curpos(0,6);
+        text("Recording:");
+        if (ev.can_record){
+            text("yes");
+        }
+        else{
+            text("no");
+        }
         if (ev.type != EVTYPE_TALK){
-            curpos(0,6);
+            curpos(14,6);
             text("Cost: ");
             text(ev.cost);
         }
@@ -438,10 +518,13 @@ char timetable_list(int changed, char key){
             }
             event_t ev;
             ev = get_event(index); // can't do this on the same as the above line, SDCC bug #3121
-            curpos(0,2+(i*2));
+            char line = 2+(i*2);
+            curpos(0,line);
             num_text(i);
             text(":");
             text(ev.title);
+            curpos(2,line+1);
+            text(ev.name);
         }
         curpos(10,1);
         text("N:Next,P:Prev,Q:Back");
@@ -471,26 +554,39 @@ char timetable_list(int changed, char key){
 char timetable(int changed, char key){
     if (changed){
         clear();
-        curpos(6,0);
-        text("EMF Timetable");
-        curpos(9,2);
-        num_text(SCHED_N_EVENTS);
-        text(" events");
-        curpos(1,4);
-        text("A - Show All");
-        curpos(1,5);
-        text("D - By Day");
-        curpos(1,6);
-        text("S - Search");
-        curpos(1,20);
-        text("Q - Main menu");
+        if (!evs_loaded){
+            curpos(0,0);
+            text("Error: Timetable is not loaded");
+            curpos(0,1);
+            text("Press Q, then load the");
+            curpos(0,2);
+            text("timetable and try again.");
+        }
+        else{
+            curpos(6,0);
+            text("EMF Timetable");
+            curpos(9,2);
+            num_text(SCHED_N_EVENTS);
+            text(" events");
+            curpos(1,4);
+            text("A - Show All");
+            curpos(1,5);
+            text("D - By Day");
+            curpos(1,6);
+            text("S - Search");
+            curpos(1,20);
+            text("Q - Main menu");
+        }
     }
 
-    if (key == 'A' || key == 'a'){
-        filt_day = 0x0;
-        filt_type = 0xff;
-        filt_title = 0;
-        return MODE_TIMETABLE_LIST;
+    if (evs_loaded){
+        // can only open a list view if the events are loaded
+        if (key == 'A' || key == 'a'){
+            filt_day = 0x0;
+            filt_type = 0xff;
+            filt_title = 0;
+            return MODE_TIMETABLE_LIST;
+        }
     }
     if (key == 'Q' || key == 'q'){
         return MODE_MAIN_MENU;
@@ -512,6 +608,35 @@ char map(int changed, char key){
     return MODE_MAP;
 }
 
+char load_evs(int changed, char key){
+    #ifdef TARGET_PC_LINUX
+        evs_loaded = load_data(events_base, EVENTS_LEN, "evlist.bin");
+        return MODE_MAIN_MENU;
+    #endif
+    #ifdef TARGET_ZXSPEC48
+        if (changed){
+            clear();
+            curpos(0,0);
+            text("Cue tape to evlist.bin");
+            curpos(0,1);
+            text("and press play.");
+            curpos(0,5);
+            text("To cancel press break.");
+            evs_loaded = load_data(events_base, EVENTS_LEN, "evlist.bin");
+            if (evs_loaded){
+                return MODE_MAIN_MENU;
+            }
+            else{
+                text("press Q to go back");
+            }
+        }
+        if (key == 'Q' || key == 'q'){
+            return MODE_MAIN_MENU;
+        }
+        return MODE_LOAD_EVS;
+    #endif
+}
+
 int main(){
     init_text();
     clear();
@@ -526,19 +651,23 @@ int main(){
         }
     #endif
     #ifdef TARGET_ZXSPEC48
-        evs_loaded = load_data(events_base, EVENTS_LEN);
+        evs_loaded = load_data_block(events_base, EVENTS_LEN);
+        evs_loaded = 0;
         if (! evs_loaded){
             curpos(0,0);
             text("Error loading events");
             curpos(0,1);
             text("will retry later...");
         }
-        strings_loaded = load_data(strings_base, STRINGS_LEN);
+        strings_loaded = load_data_block(strings_base, STRINGS_LEN);
         if (! strings_loaded){
             curpos(0,2);
             text("Error loading strings");
             curpos(0,3);
             text("will retry later...");
+            curpos(0,5);
+            text("press a key to continue");
+            get_key_press();
         }
     #endif
     int lastmode = -1;
@@ -555,6 +684,7 @@ int main(){
             case MODE_MAP: mode = map(changed, c); break;
             case MODE_TIMETABLE_LIST: mode = timetable_list(changed, c); break;
             case MODE_EVENT_DETAIL: mode = event_detail(changed, c); break;
+            case MODE_LOAD_EVS: mode = load_evs(changed, c); break;
         }
         #ifdef TARGET_PC_LINUX
             if (mode == MODE_EXIT){

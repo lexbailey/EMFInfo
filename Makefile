@@ -31,7 +31,7 @@ main.zxspec48.bin: main.c crt0.s
 main.zxspec48.bin.tap: main.zxspec48.bin bin2tap/bin2tap
 	bin2tap/bin2tap 0x8000 "EMFI_BIN" $<
 
-emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap evlist.rawbin.tap strngs.rawbin.tap
+emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap evlist.rawbin.tap strngs.rawbin.tap strngs.bin.tap evlist.bin.tap
 	cat $^ > $@
 
 %.wav: %.tap
