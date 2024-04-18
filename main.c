@@ -45,8 +45,6 @@ char *evstr[] = {
     "Talk", "Performance", "Workshop", "Youth Workshop"
 };
 
-#include "schedule.h"
-
 char filt_day = 0x0;
 char filt_type = 0xff;
 char filt_title = 0;
@@ -83,6 +81,31 @@ unsigned int num_events = 0;
 unsigned int ev_size = 0;
 char str_bit_len = 0;
 
+unsigned int div10(unsigned int a){
+    unsigned int res = 1;
+    while (res * 10 < a){
+        res <<= 1;
+    }
+    res >>= 1;
+    unsigned int b = a - (res * 10);
+    while (b > 10){
+        b -= 10;
+        res += 1;
+    }
+    return res;
+}
+
+unsigned int mul(unsigned int a, unsigned int b){
+    unsigned int c = 0;
+    unsigned int d = a;
+    while (b > 0){
+        if (b&1){ c += d; }
+        b >>= 1;
+        d += d;
+    }
+    return c;
+}
+
 unsigned int bitstream_get(char **ptr, signed char *bpos, char bits){
     char rembits = bits;
     unsigned int outval = 0;
@@ -108,7 +131,7 @@ event_t get_event(int index){
     #define CBITS(n) ((char)(bitstream_get(&p, &bpos, n)))
     #define IBITS(n) (bitstream_get(&p, &bpos, n))
     char big_str_bit_len = events_base[2]; // todo, pack this elsewhere
-    char *p = events_base + 4 + (index * ev_size);
+    char *p = events_base + 4 + mul(index, ev_size);
     char bpos = 7;
     event_t ev;
     ev.type = CBITS(2);
@@ -171,6 +194,18 @@ void curpos(char x, char y){
     #endif
 }
 
+char get_cur_x(){
+    #ifdef TARGET_ZXSPEC48
+    return *((char *)0x5c88);
+    #endif
+}
+
+char get_cur_y(){
+    #ifdef TARGET_ZXSPEC48
+    return *((char *)0x5c89);
+    #endif
+}
+
 void clear(){
     #ifdef TARGET_ZXSPEC48
     __asm__(
@@ -181,30 +216,30 @@ void clear(){
     printf("\033[2J");
     curpos(0,0);
     // this frame marks the edges of the ZX Spectrum screen (32x24 chars)
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("                              |\n");
-    printf("-------------------------------\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("                                |\n");
+    printf("---------------------------------\n");
     curpos(0,0);
     #endif
 }
@@ -288,6 +323,26 @@ void num_text(int n){
     #ifdef TARGET_PC_LINUX
     printf("%d", n);
     #endif
+}
+
+void truncated_text(char max, char* s){
+    int l = strlen(s);
+    char tmp;
+    if (l > max){
+        tmp = s[max];
+        s[max] = '\0';
+    }
+    text(s);
+    if (l > max){
+        s[max] = tmp;
+    }
+}
+
+void noscroll(){
+    if (get_cur_y() > 21) {
+        clear();
+        curpos(0,0);
+    } 
 }
 
 char get_key_press(){
@@ -380,6 +435,7 @@ char get_key_press(){
     }
     
     int load_data(void *p, unsigned int *len, char *name){
+        noscroll();
         text("\r");
         while (1){
             int ret = load_header(p);
@@ -387,17 +443,12 @@ char get_key_press(){
                 return 2;
             }
             if (ret != 1){
+                noscroll();
                 text("skip\r");
                 continue;
             }
             int rlen = ((int)(((char*)p)[11])) | (((int)(((char *)p)[12]))<<8);
             ((char*)p)[11] = '\0';
-            //if (rlen != len){
-            //    text("skip: ");
-            //    text(((char *)p)+1);
-            //    text("\r");
-            //    continue;
-            //}
             char match = 1;
             for (int i = 0; i<strlen(name); i++){
                 if (name[i] != ((char*)p)[1+i]){
@@ -406,11 +457,13 @@ char get_key_press(){
                 }
             }
             if (!match){
+                noscroll();
                 text("skip: ");
                 text(((char *)p)+1);
                 text("\r");
                 continue;
             }
+            noscroll();
             text("found: ");
             text(((char *)p)+1);
             text("\r");
@@ -528,25 +581,25 @@ char event_detail(int changed, char key){
         text(":");
         text(ev.title);
 
-        curpos(0,2);
-        text("By ");
-        text(ev.name);
         curpos(0,3);
+        text("By ");
+        truncated_text((32*3)-strlen(evstr[ev.type]),ev.name);
+        curpos(0,4);
         text("(");
-        text(ev.pronouns);
+        truncated_text(30,ev.pronouns);
         text(")");
 
-        curpos(0,4);
-        text("At ");
-        text(ev.venue);
-
         curpos(0,5);
+        text("At ");
+        truncated_text(29, ev.venue);
+
+        curpos(0,6);
         text("From ");
         time_text(ev.time);
         text(" for ");
         duration_text(ev.duration);
 
-        curpos(0,6);
+        curpos(0,7);
         text("Recording:");
         if (ev.can_record){
             text("yes");
@@ -555,9 +608,9 @@ char event_detail(int changed, char key){
             text("no");
         }
         if (ev.type != EVTYPE_TALK){
-            curpos(14,6);
+            curpos(14,7);
             text("Cost: ");
-            text(ev.cost);
+            truncated_text(12,ev.cost);
         }
 
     }
@@ -565,24 +618,6 @@ char event_detail(int changed, char key){
     return MODE_EVENT_DETAIL;
 }
 
-unsigned int div10(unsigned int a){
-    unsigned int res = 1;
-    printf("res: %d, a: %d\n", res, a);
-    while (res * 10 < a){
-        res <<= 1;
-    }
-    printf("res: %d, a: %d\n", res, a);
-    res >>= 1;
-    printf("res: %d, a: %d\n", res, a);
-    unsigned int b = a - (res * 10);
-    printf("b: %d\n", b);
-    while (b > 10){
-        b -= 10;
-        res += 1;
-    }
-    printf("res: %d, a: %d\n", res, a);
-    return res;
-}
 
 char timetable_list(int changed, char key){
     static int page = 1;
@@ -604,6 +639,8 @@ char timetable_list(int changed, char key){
         num_text(page);
         text("/");
         num_text(n_pages);
+        curpos(12,1);
+        text("N:Next,P:Prev,Q:Back");
         for (char i = 0; i < 10; i++){
             int index = ((page-1) * 10) + i;
             if (index >= num_events){
@@ -615,12 +652,10 @@ char timetable_list(int changed, char key){
             curpos(0,line);
             num_text(i);
             text(":");
-            text(ev.title);
+            truncated_text(30,ev.title);
             curpos(2,line+1);
-            text(ev.name);
+            truncated_text(30,ev.name);
         }
-        curpos(10,1);
-        text("N:Next,P:Prev,Q:Back");
     }
     if (key == 'N' || key == 'n'){
         page += 1;
