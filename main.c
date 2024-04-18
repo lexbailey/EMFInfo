@@ -295,44 +295,76 @@ char get_key_press(){
 }
 
 #ifdef TARGET_ZXSPEC48
-    int load_data_block(void* p, unsigned int len){
-        p; // hl contains p
-        len; // de contains len
+    int load_recoverable(unsigned char type, void* p, unsigned int len) __naked{
+        p; // de
+        len; // stack
+        type; // is in a already. good
         __asm__(
             "push ix\n\t"
-            "ld a, #0xff\n\t" // loading a block
-            "scf\n\t" // set carry flag to indicate load (not verify)
-            "push hl\n\t" // start addr into ix
+            "push de\n\t"
             "pop ix\n\t"
-            "call 0x0556\n\t"
+            "inc sp\n\t"
+            "inc sp\n\t"
+            "inc sp\n\t"
+            "inc sp\n\t"
+            "pop de\n\t"
+            "dec sp\n\t"
+            "dec sp\n\t"
+            "dec sp\n\t"
+            "dec sp\n\t"
+            "dec sp\n\t"
+            "dec sp\n\t"
+            "scf\n\t" // set carry flag to indicate load (not verify)
+            // some fuckery to make the loader routine not call the error handler
+            "inc d\n\t"
+            "ex af,af'\n\t"
+            "dec d\n\t"
+            "di\n\t"
+            "call 0x0562\n" // calling into the middle of the loader function intentionally, skipping the tail-call like error handler
+            "push af\n\t"// stash carry flag
+            // restore the border
+            "ld a,(0x5C48)\n\t"
+            "and #0x38\n\t"
+            "rrca\n\t"
+            "rrca\n\t"
+            "rrca\n\t"
+            "out (0xfe),a\n\t"
+
+            // check break key
+            "ld a,#0x7f\n\t"
+            "in a,(0xfe)\n\t"
+            "rra\n\t"
+            "ei\n\t"
+
+            // Determine why the loader stopped and return accordingly
+            "jr c,#load_custom_ret_end\n\t"
+            "ld de, #2\n\t"
+            "pop af\n\t"
+            "pop ix\n\t"
+            "jr load_custom_done\n"
+            "load_custom_ret_end:\n\t"
+            "pop af\n\t"
             "pop ix\n\t"
             "ld de, #1\n\t"
             "jr c, db_loadsuccess\n\t"
-            "ld de, #0\n\t"
+            "ld de, #0\n"
             "db_loadsuccess:\n\t"
+            "load_custom_done:\n\t"
+            "inc sp\n\t"
+            "inc sp\n\t"
+            "inc sp\n\t"
+            "inc sp\n\t"
             "ret\n\t"
         );
         return 0;
     }
+
+    int load_data_block(void* p, unsigned int len){
+        return load_recoverable(0xff,p,len);
+    }
     
     int load_header(void* p){
-        p; // hl contains p
-        __asm__(
-            "push ix\n\t"
-            "ld a, #0x00\n\t" // loading a header
-            "scf\n\t" // set carry flag to indicate load (not verify)
-            "push hl\n\t" // start addr into ix
-            "pop ix\n\t"
-            "ld de, #17\n\t"
-            "call 0x0556\n\t"
-            "pop ix\n\t"
-            "ld de, #1\n\t"
-            "jr c, h_loadsuccess\n\t"
-            "ld de, #0\n\t"
-            "h_loadsuccess:\n\t"
-            "ret\n\t"
-        );
-        return 0;
+        return load_recoverable(0x00,p,17);
     }
     
     int load_data(void *p, unsigned int len, char *name){
@@ -340,7 +372,7 @@ char get_key_press(){
         while (1){
             int ret = load_header(p);
             if (ret == 2){
-                return 0;
+                return 2;
             }
             if (ret != 1){
                 text("skip\r");
@@ -610,7 +642,7 @@ char map(int changed, char key){
 
 char load_evs(int changed, char key){
     #ifdef TARGET_PC_LINUX
-        evs_loaded = load_data(events_base, EVENTS_LEN, "evlist.bin");
+        evs_loaded = load_data(events_base, EVENTS_LEN, "evlist.bin") == 1;
         return MODE_MAIN_MENU;
     #endif
     #ifdef TARGET_ZXSPEC48
@@ -622,7 +654,7 @@ char load_evs(int changed, char key){
             text("and press play.");
             curpos(0,5);
             text("To cancel press break.");
-            evs_loaded = load_data(events_base, EVENTS_LEN, "evlist.bin");
+            evs_loaded = load_data(events_base, EVENTS_LEN, "evlist.bin") == 1;
             if (evs_loaded){
                 return MODE_MAIN_MENU;
             }
@@ -643,8 +675,8 @@ int main(){
     #ifdef TARGET_PC_LINUX
         atexit(cleanup);
         signal(SIGINT, interrupt);
-        evs_loaded = load_data(events_base, EVENTS_LEN, "evlist.bin");
-        strings_loaded = load_data(strings_base, STRINGS_LEN, "strngs.bin");
+        evs_loaded = load_data(events_base, EVENTS_LEN, "evlist.bin") == 1;
+        strings_loaded = load_data(strings_base, STRINGS_LEN, "strngs.bin") == 1;
         if (!evs_loaded || !strings_loaded){
             curpos(0,0);
             text("Error: Unable to load data");
