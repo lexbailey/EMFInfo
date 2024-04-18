@@ -69,12 +69,19 @@ typedef struct {
 
 #ifdef TARGET_ZXSPEC48
 char *events_base = (char *)0x9000;
-char *strings_base = 0x9000 + EVENTS_LEN;
+char *strings_base = 0;
+unsigned int events_len = 0;
+unsigned int strings_len = 0;
 #endif
 #ifdef TARGET_PC_LINUX
-uint8_t events_base[EVENTS_LEN];
-uint8_t strings_base[STRINGS_LEN];
+uint8_t *events_base;
+uint8_t *strings_base;
+size_t events_len = 0;
+size_t strings_len = 0;
 #endif
+unsigned int num_events = 0;
+unsigned int ev_size = 0;
+char str_bit_len = 0;
 
 unsigned int bitstream_get(char **ptr, signed char *bpos, char bits){
     char rembits = bits;
@@ -91,12 +98,17 @@ unsigned int bitstream_get(char **ptr, signed char *bpos, char bits){
     return outval;
 }
 
+void parse_ev_file_consts(){
+    num_events = (unsigned int)events_base[0] | (((unsigned int)events_base[1])<<8);
+    str_bit_len = events_base[2];
+    ev_size = (unsigned int)events_base[3];
+}
+
 event_t get_event(int index){
     #define CBITS(n) ((char)(bitstream_get(&p, &bpos, n)))
     #define IBITS(n) (bitstream_get(&p, &bpos, n))
-    char str_bit_len = events_base[0];
-    char big_str_bit_len = events_base[0]; // todo, pack this elsewhere
-    char *p = events_base + 1 + (index * EV_SIZE);
+    char big_str_bit_len = events_base[2]; // todo, pack this elsewhere
+    char *p = events_base + 4 + (index * ev_size);
     char bpos = 7;
     event_t ev;
     ev.type = CBITS(2);
@@ -367,7 +379,7 @@ char get_key_press(){
         return load_recoverable(0x00,p,17);
     }
     
-    int load_data(void *p, unsigned int len, char *name){
+    int load_data(void *p, unsigned int *len, char *name){
         text("\r");
         while (1){
             int ret = load_header(p);
@@ -380,12 +392,12 @@ char get_key_press(){
             }
             int rlen = ((int)(((char*)p)[11])) | (((int)(((char *)p)[12]))<<8);
             ((char*)p)[11] = '\0';
-            if (rlen != len){
-                text("skip: ");
-                text(((char *)p)+1);
-                text("\r");
-                continue;
-            }
+            //if (rlen != len){
+            //    text("skip: ");
+            //    text(((char *)p)+1);
+            //    text("\r");
+            //    continue;
+            //}
             char match = 1;
             for (int i = 0; i<strlen(name); i++){
                 if (name[i] != ((char*)p)[1+i]){
@@ -402,22 +414,52 @@ char get_key_press(){
             text("found: ");
             text(((char *)p)+1);
             text("\r");
+            *len = rlen;
             break;
         }
-        return load_data_block(p, len);
+        return load_data_block(p, *len);
     }
 #endif
 
 #ifdef TARGET_PC_LINUX
-    int load_data(void* p, size_t len, char *fname){
+    size_t flen(char *fname){
         FILE *f = fopen(fname, "rb");
         if (f == NULL){
             return 0;
         }
-        size_t r = fread(p, 1, len, f);
-        if (r != len){
+        if (fseek(f, 0, SEEK_END)){
+            fclose(f);
             return 0;
         }
+        size_t len = ftell(f);
+        fclose(f);
+        return len;
+    }
+
+    int load_data(void* p, size_t *len, char *fname){
+        FILE *f = fopen(fname, "rb");
+        if (f == NULL){
+            return 0;
+        }
+        if (fseek(f, 0, SEEK_END)){
+            fclose(f);
+            return 0;
+        }
+        size_t a_len = ftell(f);
+        if (*len > 0 && *len != a_len){
+            fclose(f);
+            return 0;
+        } 
+        if (fseek(f, 0, SEEK_SET)){
+            fclose(f);
+            return 0;
+        }
+        size_t r = fread(p, 1, *len, f);
+        if (r != *len){
+            fclose(f);
+            return 0;
+        }
+        fclose(f);
         return 1;
     }
 #endif
@@ -523,11 +565,30 @@ char event_detail(int changed, char key){
     return MODE_EVENT_DETAIL;
 }
 
+unsigned int div10(unsigned int a){
+    unsigned int res = 1;
+    printf("res: %d, a: %d\n", res, a);
+    while (res * 10 < a){
+        res <<= 1;
+    }
+    printf("res: %d, a: %d\n", res, a);
+    res >>= 1;
+    printf("res: %d, a: %d\n", res, a);
+    unsigned int b = a - (res * 10);
+    printf("b: %d\n", b);
+    while (b > 10){
+        b -= 10;
+        res += 1;
+    }
+    printf("res: %d, a: %d\n", res, a);
+    return res;
+}
+
 char timetable_list(int changed, char key){
     static int page = 1;
     static int n_pages = 1;
     if (changed){
-        n_pages = (SCHED_N_EVENTS/10)+1;
+        n_pages = div10(num_events)+1;
         clear();
         curpos(0,0);
         text("EMF Timetable (");
@@ -545,7 +606,7 @@ char timetable_list(int changed, char key){
         num_text(n_pages);
         for (char i = 0; i < 10; i++){
             int index = ((page-1) * 10) + i;
-            if (index >= SCHED_N_EVENTS){
+            if (index >= num_events){
                 break;
             }
             event_t ev;
@@ -598,7 +659,7 @@ char timetable(int changed, char key){
             curpos(6,0);
             text("EMF Timetable");
             curpos(9,2);
-            num_text(SCHED_N_EVENTS);
+            num_text(num_events);
             text(" events");
             curpos(1,4);
             text("A - Show All");
@@ -642,7 +703,11 @@ char map(int changed, char key){
 
 char load_evs(int changed, char key){
     #ifdef TARGET_PC_LINUX
-        evs_loaded = load_data(events_base, EVENTS_LEN, "evlist.bin") == 1;
+        events_len = flen("evlist.bin");
+        evs_loaded = load_data(events_base, &events_len, "evlist.bin") == 1;
+        if (evs_loaded){
+            parse_ev_file_consts();
+        }
         return MODE_MAIN_MENU;
     #endif
     #ifdef TARGET_ZXSPEC48
@@ -654,8 +719,9 @@ char load_evs(int changed, char key){
             text("and press play.");
             curpos(0,5);
             text("To cancel press break.");
-            evs_loaded = load_data(events_base, EVENTS_LEN, "evlist.bin") == 1;
+            evs_loaded = load_data(events_base, &events_len, "evlist.bin") == 1;
             if (evs_loaded){
+                parse_ev_file_consts();
                 return MODE_MAIN_MENU;
             }
             else{
@@ -675,31 +741,48 @@ int main(){
     #ifdef TARGET_PC_LINUX
         atexit(cleanup);
         signal(SIGINT, interrupt);
-        evs_loaded = load_data(events_base, EVENTS_LEN, "evlist.bin") == 1;
-        strings_loaded = load_data(strings_base, STRINGS_LEN, "strngs.bin") == 1;
+        events_len = flen("evlist.bin");
+        strings_len = flen("strngs.bin");
+        events_base = malloc(sizeof(char) * events_len);
+        strings_base = malloc(sizeof(char) * strings_len);
+        evs_loaded = load_data(events_base, &events_len, "evlist.bin") == 1;
+        strings_loaded = load_data(strings_base, &strings_len, "strngs.bin") == 1;
         if (!evs_loaded || !strings_loaded){
             curpos(0,0);
             text("Error: Unable to load data");
-        }
-    #endif
-    #ifdef TARGET_ZXSPEC48
-        evs_loaded = load_data_block(events_base, EVENTS_LEN);
-        evs_loaded = 0;
-        if (! evs_loaded){
-            curpos(0,0);
-            text("Error loading events");
-            curpos(0,1);
-            text("will retry later...");
-        }
-        strings_loaded = load_data_block(strings_base, STRINGS_LEN);
-        if (! strings_loaded){
-            curpos(0,2);
-            text("Error loading strings");
-            curpos(0,3);
-            text("will retry later...");
+            perror("a");
             curpos(0,5);
             text("press a key to continue");
             get_key_press();
+        }
+        else{
+            parse_ev_file_consts();
+        }
+    #endif
+    #ifdef TARGET_ZXSPEC48
+        evs_loaded = load_data(events_base, &events_len, "evlist.bin") == 1;
+        if (! evs_loaded){
+            curpos(0,0);
+            text("Error loading events.");
+            curpos(0,1);
+            text("Please retry from menu.");
+            curpos(0,5);
+            text("press a key to continue");
+            get_key_press();
+        }
+        else{
+            parse_ev_file_consts();
+            strings_base = events_base + events_len;
+            strings_loaded = load_data(strings_base, &strings_len, "strngs.bin") == 1;
+            if (! strings_loaded){
+                curpos(0,2);
+                text("Error loading strings.");
+                curpos(0,3);
+                text("Please retry from menu.");
+                curpos(0,5);
+                text("press a key to continue");
+                get_key_press();
+            }
         }
     #endif
     int lastmode = -1;

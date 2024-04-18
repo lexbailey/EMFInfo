@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+import math
+from datetime import datetime
+import json
+
+strings = [
+    (0, b'\0')
+]
+
+descr_str = {
+}
+
+def getstr(s, ss):
+    for i, es in ss:
+        if s+b'\0' == es:
+            return i
+    assert False, f"String not found: {s}"
+
+def maybegetstr(s, ss):
+    for i, es in ss:
+        if s+b'\0' == es:
+            return i
+    return None
+
+def addstr(s, ss):
+    if len(ss) == 0:
+        ss.append((0, s+b'\0'))
+        return 0
+    existing = maybegetstr(s, ss)
+    if existing is None:
+        lastpos, last_s = ss[-1]
+        pos = lastpos + len(last_s)
+        ss.append((pos, s+b'\0'))
+        return pos
+    return existing
+
+
+j = json.load(open('schedule.json'))
+
+def str_id_bits(ss):
+    max_n = ss[-1][0]
+    b = math.ceil(math.log2(max_n))
+    return b
+
+def tobits(num, b):
+    bits = []
+    for i in reversed(range(b)):
+        n = 1<<i;
+        if (num & n) > 0:
+            bits.append(1)
+        else:
+            bits.append(0)
+    return bits
+
+def compact(bits):
+    bytes_ = []
+    while len(bits)>=8:
+        chunk, bits = bits[0:8], bits[8:]
+        t = 0
+        for i in range(8):
+            t = (t << 1) | chunk[i]
+        bytes_.append(t)
+    return bytes(bytes_)
+
+def prep_event(title, venue, name, pronouns, cost):
+    title = addstr(title, strings)
+    venue = addstr(venue, strings)
+    name = addstr(name, strings)
+    pronouns = addstr(pronouns, strings)
+    cost = addstr(cost, strings)
+
+def make_event(f, title, venue, name, pronouns, cost, time, duration, type_, can_record):
+    print(title, venue, name, pronouns, cost)
+    title = getstr(title, strings)
+    venue = getstr(venue, strings)
+    name = getstr(name, strings)
+    pronouns = getstr(pronouns, strings)
+    cost = getstr(cost, strings)
+    print(*[hex(a) for a in [title, venue, name, pronouns, cost]])
+    can_record_i = 0
+    if can_record:
+        can_record_i = 1
+    f.write(bytes([(type_ << 6) | (can_record_i << 5) | (time & 0x1f), time & 0xff]))
+    f.write(bytes([duration]))
+    b = str_id_bits(strings)
+    bits = []
+    bits.extend(tobits(title, b))
+    bits.extend(tobits(venue, b))
+    bits.extend(tobits(name, b))
+    bits.extend(tobits(pronouns, b))
+    bits.extend(tobits(cost, b))
+    bytes_ = compact(bits)
+    f.write(bytes_)
+    f.write(bytes([0,0])) # a bit of padding for the description pointer, currently ignored
+
+def type_id(s):
+    return {
+        'talk': 0,
+        'performance': 1,
+        'workshop': 2,
+        'youth workshop': 3,
+    }.get(s.lower(), 0)
+
+def parsedate(d):
+    return datetime.strptime(d, '%Y-%m-%d %H:%M:%S')
+
+with open("evlist.bin", 'wb+') as f:
+    for ev in j:
+        i = lambda n: str(ev.get(n,'')).encode()
+        prep_event(i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'))
+    num_evs = len(j)
+    f.write(bytes([num_evs & 0xff, (num_evs >> 8) & 0xff]))
+    bps = str_id_bits(strings)
+    f.write(bytes([bps]))
+    ev_size = int(math.ceil(float(((3*8) + (bps * 5))) / 8.0))+1#TODO +2 is fudge for description currently missing
+    f.write(bytes([ev_size]))
+    for ev in j:
+        i = lambda n: str(ev.get(n,'')).encode()
+        type_ = type_id(ev.get('type'))
+        can_record = ev.get('may_record', False)
+        st = parsedate(ev.get('start_date'))
+        et = parsedate(ev.get('end_date'))
+        time = 0
+        duration = int((et-st).total_seconds()) // 60
+        if (duration > 255):
+            duration = 0
+        make_event(f, i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'), time, duration, type_, can_record)
+
+with open("strngs.bin", 'wb+') as f:
+    for (p,s) in strings:
+        f.write(s)
