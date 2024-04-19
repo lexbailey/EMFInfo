@@ -112,20 +112,24 @@ unsigned int mul(unsigned int a, unsigned int b){
     return c;
 }
 
-unsigned int bitstream_get(char **ptr, signed char *bpos, char bits){
+char *bitstream_ptr;
+signed char bitstream_pos;
+
+unsigned int bitstream_get(char bits){
     char rembits = bits;
     unsigned int outval = 0;
     while (rembits) {
-        outval = (outval << 1) | ((*ptr[0] >> *bpos) & 1);
-        *bpos -= 1;
-        if (*bpos < 0){
-            *bpos = 7;
-            *ptr += 1;
+        outval = (outval << 1) | ((bitstream_ptr[0] >> bitstream_pos) & 1);
+        bitstream_pos -= 1;
+        if (bitstream_pos < 0){
+            bitstream_pos = 7;
+            bitstream_ptr += 1;
         }
         rembits --;
     }
     return outval;
 }
+#define BITSTREAM_INIT(p) bitstream_ptr=p;bitstream_pos=7;
 
 void parse_ev_file_consts(){
     num_events = (unsigned int)events_base[0] | (((unsigned int)events_base[1])<<8);
@@ -135,22 +139,26 @@ void parse_ev_file_consts(){
 }
 
 event_t get_event(int index){
-    #define CBITS(n) ((char)(bitstream_get(&p, &bpos, n)))
-    #define IBITS(n) (bitstream_get(&p, &bpos, n))
+    #define CBITS(n) ((char)(bitstream_get(n)))
+    #define PBITS(n) ((char*)bitstream_get(n))
+    #define IBITS(n) ((unsigned int)bitstream_get(n))
     char big_str_bit_len = events_base[2]; // todo, pack this elsewhere
     char *p = events_base + 5 + mul(index, ev_size);
-    char bpos = 7;
+    BITSTREAM_INIT(p)
     event_t ev;
     ev.type = CBITS(2);
     ev.can_record = CBITS(1);
     ev.time = IBITS(13);
     ev.duration = IBITS(8);
-    ev.title = strings_base + IBITS(str_bit_len);
-    ev.venue = strings_base + IBITS(str_bit_len);
-    ev.name = strings_base + IBITS(str_bit_len);
-    ev.pronouns = strings_base + IBITS(str_bit_len);
-    ev.cost = strings_base + IBITS(str_bit_len);
-    ev.descr = strings_base + IBITS(big_str_bit_len);
+    ev.title = PBITS(str_bit_len);
+    ev.venue = PBITS(str_bit_len);
+    ev.name = PBITS(str_bit_len);
+    ev.pronouns = PBITS(str_bit_len);
+    ev.cost = PBITS(str_bit_len);
+    ev.descr = strings_base + IBITS(big_str_bit_len); // TODO this is wrong
+    for (char **s = &ev.title; s < &ev.descr; s++){
+        *s += (unsigned int)strings_base;
+    }
     return ev;
     #undef CBITS
     #undef IBITS
