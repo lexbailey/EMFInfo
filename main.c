@@ -156,8 +156,10 @@ event_t get_event(int index){
     ev.pronouns = PBITS(str_bit_len);
     ev.cost = PBITS(str_bit_len);
     ev.descr = strings_base + IBITS(big_str_bit_len); // TODO this is wrong
-    for (char **s = &ev.title; s < &ev.descr; s++){
+    char **s = &ev.title;
+    for (unsigned char x = 5; x>0;x--){
         *s += (unsigned int)strings_base;
+        s++;
     }
     return ev;
     #undef CBITS
