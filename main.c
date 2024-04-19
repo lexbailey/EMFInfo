@@ -27,22 +27,27 @@
 #error "Unknown target. Please define one of the TARGET_ preprocessor defs."
 #endif
 
-#define MODE_MAIN_MENU (0)
-#define MODE_TIMETABLE (1)
-#define MODE_MAP (2)
-#define MODE_TIMETABLE_LIST (3)
-#define MODE_EVENT_DETAIL (5)
-#define MODE_LOAD_EVS (6)
-
-#define MODE_EXIT (-1)
-
 #define EVTYPE_TALK (0)
 #define EVTYPE_PERFORMANCE (1)
 #define EVTYPE_WORKSHOP (2)
 #define EVTYPE_YOUTHWORKSHOP (3)
 
+typedef void (*(*uifunc)(char, char))();
+
+uifunc menu(char, char);
+uifunc event_detail(char, char);
+uifunc timetable_list(char, char);
+uifunc timetable(char, char);
+uifunc terminate(char, char);
+uifunc map(char, char);
+uifunc load_evs(char, char);
+
 char *evstr[] = {
     "Talk", "Performance", "Workshop", "Youth Workshop"
+};
+
+char *daynames[] = {
+    "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
 };
 
 char filt_day = 0x0;
@@ -172,7 +177,7 @@ void interrupt(int sig){
 }
 #endif
 
-char mode = MODE_MAIN_MENU;
+uifunc mode = (uifunc)menu;
 
 void curpos(char x, char y){
     #ifdef TARGET_ZXSPEC48
@@ -517,7 +522,7 @@ char get_key_press(){
     }
 #endif
 
-char menu(int changed, char key){
+uifunc menu(char changed, char key){
     if (changed){
         clear();
         curpos(6,0);
@@ -532,23 +537,23 @@ char menu(int changed, char key){
         }
     }
     if (key == 'T' || key == 't'){
-        return MODE_TIMETABLE;
+        return (uifunc)timetable;
     }
     if (key == 'M' || key == 'm'){
-        return MODE_MAP;
+        return (uifunc)map;
     }
     if (!evs_loaded){
         if (key == 'E' || key == 'e'){
-            return MODE_LOAD_EVS;
+            return (uifunc)load_evs;
         }
     }
     #ifdef TARGET_PC_LINUX
     if (key == 'Q' || key == 'q'){
         printf("exit now\n");
-        return MODE_EXIT;
+        return (uifunc)terminate;
     }
     #endif
-    return MODE_MAIN_MENU;
+    return (uifunc)menu;
 }
 
 void time_text(unsigned int time){
@@ -571,7 +576,7 @@ void duration_text(unsigned char dur){
 
 int ev_id = 0;
 
-char event_detail(int changed, char key){
+uifunc event_detail(char changed, char key){
     if (changed) {
         clear();
         event_t ev;
@@ -614,12 +619,12 @@ char event_detail(int changed, char key){
         }
 
     }
-    if (key == 'Q' || key == 'q'){ return MODE_TIMETABLE_LIST; }
-    return MODE_EVENT_DETAIL;
+    if (key == 'Q' || key == 'q'){ return (uifunc)timetable_list; }
+    return (uifunc)event_detail;
 }
 
 
-char timetable_list(int changed, char key){
+uifunc timetable_list(char changed, char key){
     static int page = 1;
     static int n_pages = 1;
     if (changed){
@@ -673,13 +678,13 @@ char timetable_list(int changed, char key){
     }
     if (key >= '0' && key <= '9'){
         ev_id = ((page-1) * 10) + key - '0';
-        return MODE_EVENT_DETAIL;
+        return (uifunc)event_detail;
     }
-    if (key == 'Q' || key == 'q'){ return MODE_TIMETABLE; }
-    return MODE_TIMETABLE_LIST;
+    if (key == 'Q' || key == 'q'){ return (uifunc)timetable; }
+    return (uifunc)timetable_list;
 }
 
-char timetable(int changed, char key){
+uifunc timetable(char changed, char key){
     if (changed){
         clear();
         if (!evs_loaded){
@@ -713,16 +718,19 @@ char timetable(int changed, char key){
             filt_day = 0x0;
             filt_type = 0xff;
             filt_title = 0;
-            return MODE_TIMETABLE_LIST;
+            return (uifunc)timetable_list;
         }
     }
     if (key == 'Q' || key == 'q'){
-        return MODE_MAIN_MENU;
+        return (uifunc)menu;
     }
-    return MODE_TIMETABLE;
+    return (uifunc)timetable;
 }
 
-char map(int changed, char key){
+uifunc terminate(char changed, char key){
+}
+
+uifunc map(char changed, char key){
     if (changed){
         clear();
         curpos(0,0);
@@ -731,19 +739,19 @@ char map(int changed, char key){
         text("Q - Main menu");
     }
     if (key == 'Q' || key == 'q'){
-        return MODE_MAIN_MENU;
+        return (uifunc)menu;
     }
-    return MODE_MAP;
+    return (uifunc)map;
 }
 
-char load_evs(int changed, char key){
+uifunc load_evs(char changed, char key){
     #ifdef TARGET_PC_LINUX
         events_len = flen("evlist.bin");
         evs_loaded = load_data(events_base, &events_len, "evlist.bin") == 1;
         if (evs_loaded){
             parse_ev_file_consts();
         }
-        return MODE_MAIN_MENU;
+        return (uifunc)menu;
     #endif
     #ifdef TARGET_ZXSPEC48
         if (changed){
@@ -757,16 +765,16 @@ char load_evs(int changed, char key){
             evs_loaded = load_data(events_base, &events_len, "evlist.bin") == 1;
             if (evs_loaded){
                 parse_ev_file_consts();
-                return MODE_MAIN_MENU;
+                return (uifunc)menu;
             }
             else{
                 text("press Q to go back");
             }
         }
         if (key == 'Q' || key == 'q'){
-            return MODE_MAIN_MENU;
+            return (uifunc)menu;
         }
-        return MODE_LOAD_EVS;
+        return (uifunc)load_evs;
     #endif
 }
 
@@ -820,24 +828,17 @@ int main(){
             }
         }
     #endif
-    int lastmode = -1;
+    uifunc lastmode = (uifunc)-1;
     while (1){
-        int changed = lastmode != mode;
+        char changed = lastmode != mode;
         lastmode = mode;
         char c = '\0';
         if (!changed){
             c = get_key_press();
         }
-        switch (mode){
-            case MODE_MAIN_MENU: mode = menu(changed, c); break;
-            case MODE_TIMETABLE: mode = timetable(changed, c); break;
-            case MODE_MAP: mode = map(changed, c); break;
-            case MODE_TIMETABLE_LIST: mode = timetable_list(changed, c); break;
-            case MODE_EVENT_DETAIL: mode = event_detail(changed, c); break;
-            case MODE_LOAD_EVS: mode = load_evs(changed, c); break;
-        }
+        mode = (uifunc)mode(changed, c);
         #ifdef TARGET_PC_LINUX
-            if (mode == MODE_EXIT){
+            if (mode == (uifunc)terminate){
                 return 0;
             }
         #endif
@@ -863,3 +864,5 @@ int main(){
 	return 0;
 }
 */
+
+

@@ -10,6 +10,8 @@ strings = [
 descr_str = {
 }
 
+time_bits = 13
+
 def getstr(s, ss):
     for i, es in ss:
         if s+b'\0' == es:
@@ -62,6 +64,11 @@ def compact(bits):
         bytes_.append(t)
     return bytes(bytes_)
 
+earliest = None
+
+def parsedate(d):
+    return datetime.strptime(d, '%Y-%m-%d %H:%M:%S')
+
 def prep_event(title, venue, name, pronouns, cost):
     title = addstr(title, strings)
     venue = addstr(venue, strings)
@@ -70,13 +77,11 @@ def prep_event(title, venue, name, pronouns, cost):
     cost = addstr(cost, strings)
 
 def make_event(f, title, venue, name, pronouns, cost, time, duration, type_, can_record):
-    print(title, venue, name, pronouns, cost)
     title = getstr(title, strings)
     venue = getstr(venue, strings)
     name = getstr(name, strings)
     pronouns = getstr(pronouns, strings)
     cost = getstr(cost, strings)
-    print(*[hex(a) for a in [title, venue, name, pronouns, cost]])
     can_record_i = 0
     if can_record:
         can_record_i = 1
@@ -101,26 +106,35 @@ def type_id(s):
         'youth workshop': 3,
     }.get(s.lower(), 0)
 
-def parsedate(d):
-    return datetime.strptime(d, '%Y-%m-%d %H:%M:%S')
-
 with open("evlist.bin", 'wb+') as f:
     for ev in j:
         i = lambda n: str(ev.get(n,'')).encode()
         prep_event(i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'))
+        st = parsedate(ev.get('start_date'))
+        if earliest is None or st < earliest:
+            earliest = st
+    print(earliest)
+
+    # rewind to the start of the day of the earliest event
+    earliest.replace(hour=0, minute=0, second=0, microsecond=0)
+
     num_evs = len(j)
     f.write(bytes([num_evs & 0xff, (num_evs >> 8) & 0xff]))
     bps = str_id_bits(strings)
     f.write(bytes([bps]))
     ev_size = int(math.ceil(float(((3*8) + (bps * 5))) / 8.0))+1#TODO +2 is fudge for description currently missing
     f.write(bytes([ev_size]))
+    maxtime = (2**time_bits)-1
     for ev in j:
         i = lambda n: str(ev.get(n,'')).encode()
         type_ = type_id(ev.get('type'))
         can_record = ev.get('may_record', False)
         st = parsedate(ev.get('start_date'))
         et = parsedate(ev.get('end_date'))
-        time = 0
+        time = int((st - earliest).total_seconds()) // 60
+        print(time)
+        if time > maxtime:
+            print(f"ERROR: time is too big: {time}")
         duration = int((et-st).total_seconds()) // 60
         if (duration > 255):
             duration = 0
