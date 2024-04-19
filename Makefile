@@ -38,8 +38,8 @@ emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap evlist.bin.tap strngs.bi
 	tape2wav $< $@
 
 emfinfo_linux: main.c
-	cc -DTARGET_PC_LINUX -c main.c -o main.o
-	cc -o $@ main.o
+	cc -gdwarf -DTARGET_PC_LINUX -c main.c -o main.o
+	cc -gdwarf -o $@ main.o
 
 all: emfinfo_zxspec48.tap emfinfo_linux
 

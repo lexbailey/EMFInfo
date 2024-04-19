@@ -1,5 +1,4 @@
 
-#define STORAGE_MEDIUM "disk"
 
 #ifdef TARGET_ZXSPEC48
 #define __TARGET_KNOWN
@@ -8,10 +7,13 @@
 #endif
 #define STORAGE_MEDIUM "tape"
 #define LAST_K (*((char*)(23560)))
+#pragma disable_warning 84
+#pragma disable_warning 85
 #endif
 
 #ifdef TARGET_PC_LINUX
 #define __TARGET_KNOWN
+#define STORAGE_MEDIUM "disk"
 #include <termios.h>
 #include <unistd.h>
 #include <string.h>
@@ -139,9 +141,15 @@ void parse_ev_file_consts(){
 }
 
 event_t get_event(int index){
-    #define CBITS(n) ((char)(bitstream_get(n)))
-    #define PBITS(n) ((char*)bitstream_get(n))
-    #define IBITS(n) ((unsigned int)bitstream_get(n))
+    #ifdef TARGET_ZXSPEC48
+        #define CBITS(n) ((char)(bitstream_get(n)))
+        #define PBITS(n) ((char*)bitstream_get(n))
+        #define IBITS(n) ((unsigned int)bitstream_get(n))
+    #else
+        #define CBITS(n) ((char)(bitstream_get(n)))
+        #define PBITS(n) (strings_base + bitstream_get(n))
+        #define IBITS(n) (bitstream_get(n))
+    #endif
     char big_str_bit_len = events_base[2]; // todo, pack this elsewhere
     char *p = events_base + 5 + mul(index, ev_size);
     BITSTREAM_INIT(p)
@@ -156,11 +164,13 @@ event_t get_event(int index){
     ev.pronouns = PBITS(str_bit_len);
     ev.cost = PBITS(str_bit_len);
     ev.descr = strings_base + IBITS(big_str_bit_len); // TODO this is wrong
-    char **s = &ev.title;
-    for (unsigned char x = 5; x>0;x--){
-        *s += (unsigned int)strings_base;
-        s++;
-    }
+    #ifdef TARGET_ZXSPEC48
+        char **s = &ev.title;
+        for (unsigned char x = 5; x>0;x--){
+            *s += (unsigned int)strings_base;
+            s++;
+        }
+    #endif
     return ev;
     #undef CBITS
     #undef IBITS
