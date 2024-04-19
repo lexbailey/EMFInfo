@@ -2,6 +2,8 @@
 import math
 from datetime import datetime
 import json
+import os
+import sys
 
 strings = [
     (0, b'\0')
@@ -54,9 +56,12 @@ def tobits(num, b):
             bits.append(0)
     return bits
 
-def compact(bits):
+def compact(ibits):
+    bits = ibits.copy()
     bytes_ = []
-    while len(bits)>=8:
+    while len(bits) % 8 != 0:
+        bits.append(0)
+    while bits:
         chunk, bits = bits[0:8], bits[8:]
         t = 0
         for i in range(8):
@@ -85,7 +90,9 @@ def make_event(f, title, venue, name, pronouns, cost, time, duration, type_, can
     can_record_i = 0
     if can_record:
         can_record_i = 1
-    f.write(bytes([(type_ << 6) | (can_record_i << 5) | (time & 0x1f), time & 0xff]))
+    l = 2
+    f.write(bytes([(type_ << 6) | (can_record_i << 5) | ((time>>8) & 0x1f), time & 0xff]))
+    l += 1
     f.write(bytes([duration]))
     b = str_id_bits(strings)
     bits = []
@@ -95,7 +102,9 @@ def make_event(f, title, venue, name, pronouns, cost, time, duration, type_, can
     bits.extend(tobits(pronouns, b))
     bits.extend(tobits(cost, b))
     bytes_ = compact(bits)
+    l += len(bytes_)
     f.write(bytes_)
+    l += 2
     f.write(bytes([0,0])) # a bit of padding for the description pointer, currently ignored
 
 def type_id(s):
@@ -113,26 +122,27 @@ with open("evlist.bin", 'wb+') as f:
         st = parsedate(ev.get('start_date'))
         if earliest is None or st < earliest:
             earliest = st
-    print(earliest)
 
     # rewind to the start of the day of the earliest event
-    earliest.replace(hour=0, minute=0, second=0, microsecond=0)
+    earliest = earliest.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    day0 = earliest.weekday()
 
     num_evs = len(j)
     f.write(bytes([num_evs & 0xff, (num_evs >> 8) & 0xff]))
     bps = str_id_bits(strings)
     f.write(bytes([bps]))
-    ev_size = int(math.ceil(float(((3*8) + (bps * 5))) / 8.0))+1#TODO +2 is fudge for description currently missing
+    ev_size = int(math.ceil(float(((3*8) + (bps * 5))) / 8.0))+2#TODO +2 is fudge for description currently missing
     f.write(bytes([ev_size]))
+    f.write(bytes([day0]))
     maxtime = (2**time_bits)-1
-    for ev in j:
+    for ev in sorted(j, key=lambda e: parsedate(e.get('start_date'))):
         i = lambda n: str(ev.get(n,'')).encode()
         type_ = type_id(ev.get('type'))
         can_record = ev.get('may_record', False)
         st = parsedate(ev.get('start_date'))
         et = parsedate(ev.get('end_date'))
         time = int((st - earliest).total_seconds()) // 60
-        print(time)
         if time > maxtime:
             print(f"ERROR: time is too big: {time}")
         duration = int((et-st).total_seconds()) // 60
@@ -140,6 +150,16 @@ with open("evlist.bin", 'wb+') as f:
             duration = 0
         make_event(f, i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'), time, duration, type_, can_record)
 
+evlen = os.path.getsize("evlist.bin")
+
+strstart = 0x9000+evlen
+
 with open("strngs.bin", 'wb+') as f:
     for (p,s) in strings:
         f.write(s)
+
+if len(sys.argv) > 1:
+    print(sys.argv[1])
+    for (i,s) in strings:
+        if s.startswith(sys.argv[1].encode()):
+            print(f"{s} starts at {hex(strstart)} + {hex(i)} = {hex(i+strstart)}")

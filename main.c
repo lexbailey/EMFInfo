@@ -32,7 +32,7 @@
 #define EVTYPE_WORKSHOP (2)
 #define EVTYPE_YOUTHWORKSHOP (3)
 
-typedef void (*(*uifunc)(char, char))();
+typedef void (*(*uifunc)(char, char))(); //close enough. I technically can't actually write the type I want, but I can aggressively cast to this approximation
 
 uifunc menu(char, char);
 uifunc event_detail(char, char);
@@ -85,6 +85,7 @@ size_t strings_len = 0;
 unsigned int num_events = 0;
 unsigned int ev_size = 0;
 char str_bit_len = 0;
+char day0_index = 0; //what day of the week (monday=0) is the one that the epoch starts on?
 
 unsigned int div10(unsigned int a){
     unsigned int res = 1;
@@ -115,7 +116,7 @@ unsigned int bitstream_get(char **ptr, signed char *bpos, char bits){
     char rembits = bits;
     unsigned int outval = 0;
     while (rembits) {
-        outval = (outval << 1) | (*ptr[0] >> *bpos & 1);
+        outval = (outval << 1) | ((*ptr[0] >> *bpos) & 1);
         *bpos -= 1;
         if (*bpos < 0){
             *bpos = 7;
@@ -130,13 +131,14 @@ void parse_ev_file_consts(){
     num_events = (unsigned int)events_base[0] | (((unsigned int)events_base[1])<<8);
     str_bit_len = events_base[2];
     ev_size = (unsigned int)events_base[3];
+    day0_index = events_base[4];
 }
 
 event_t get_event(int index){
     #define CBITS(n) ((char)(bitstream_get(&p, &bpos, n)))
     #define IBITS(n) (bitstream_get(&p, &bpos, n))
     char big_str_bit_len = events_base[2]; // todo, pack this elsewhere
-    char *p = events_base + 4 + mul(index, ev_size);
+    char *p = events_base + 5 + mul(index, ev_size);
     char bpos = 7;
     event_t ev;
     ev.type = CBITS(2);
@@ -328,6 +330,17 @@ void num_text(int n){
     #ifdef TARGET_PC_LINUX
     printf("%d", n);
     #endif
+}
+
+void num_text_0pad2(int n){
+    if (n < 0){
+        text("-");
+        n = -n;
+    }
+    if (n < 10){
+        text("0");
+    }
+    num_text(n);
 }
 
 void truncated_text(char max, char* s){
@@ -557,6 +570,26 @@ uifunc menu(char changed, char key){
 }
 
 void time_text(unsigned int time){
+    char day = day0_index;
+    while (time >= (24*60)){
+        time -= 24*60;
+        if (day >= 6){
+            day = 0;
+        }
+        else{
+            day++;
+        }
+    }
+    text(daynames[day]);
+    text(" ");
+    int hour = 0;
+    while (time >= 60){
+        time -= 60;
+        hour += 1;
+    }
+    num_text_0pad2(hour);
+    text(":");
+    num_text_0pad2(time);
 }
 
 void duration_text(unsigned char dur){
@@ -584,11 +617,11 @@ uifunc event_detail(char changed, char key){
         curpos(0,0);
         text(evstr[ev.type]);
         text(":");
-        text(ev.title);
+        truncated_text((32*3)-strlen(evstr[ev.type]),ev.title);
 
         curpos(0,3);
         text("By ");
-        truncated_text((32*3)-strlen(evstr[ev.type]),ev.name);
+        truncated_text(29,ev.name);
         curpos(0,4);
         text("(");
         truncated_text(30,ev.pronouns);
