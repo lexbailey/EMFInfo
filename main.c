@@ -52,6 +52,11 @@ char *daynames[] = {
     "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"
 };
 
+unsigned int events_per_day[] = {0,0,0,0,0,0,0};
+
+unsigned int num_pages;
+unsigned int page_starts[50];
+
 char filt_day = 0x0;
 char filt_type = 0xff;
 char filt_title = 0;
@@ -73,7 +78,7 @@ typedef struct {
 } event_t;
 
 #ifdef TARGET_ZXSPEC48
-char *events_base = (char *)0x9000;
+char *events_base = (char *)0xA000;
 char *strings_base = 0;
 unsigned int events_len = 0;
 unsigned int strings_len = 0;
@@ -88,6 +93,7 @@ unsigned int num_events = 0;
 unsigned int ev_size = 0;
 char str_bit_len = 0;
 char day0_index = 0; //what day of the week (monday=0) is the one that the epoch starts on?
+
 
 unsigned int div10(unsigned int a){
     unsigned int res = 1;
@@ -131,25 +137,29 @@ unsigned int bitstream_get(char bits){
     }
     return outval;
 }
+
 #define BITSTREAM_INIT(p) bitstream_ptr=p;bitstream_pos=7;
 
-void parse_ev_file_consts(){
-    num_events = (unsigned int)events_base[0] | (((unsigned int)events_base[1])<<8);
-    str_bit_len = events_base[2];
-    ev_size = (unsigned int)events_base[3];
-    day0_index = events_base[4];
-}
+// finds the filter bit for the given event index
+signed char *filt_ptr(unsigned int index){ return events_base + 8 + mul(index, ev_size); }
+// returns a negative number if the event is filtered out, otherwise returns a positive number
+signed char filt_get(unsigned int index){ return *filt_ptr(index); }
+// sets the filter bit (to filter out the event)
+void filt_set(unsigned int index){ *filt_ptr(index) |= 0x80; }
+// clears the filter bit
+void filt_clear(unsigned int index){ *filt_ptr(index) &= 0x7f; }
 
-event_t get_event(int index){
-    #ifdef TARGET_ZXSPEC48
-        #define CBITS(n) ((char)(bitstream_get(n)))
-        #define PBITS(n) ((char*)bitstream_get(n))
-        #define IBITS(n) ((unsigned int)bitstream_get(n))
-    #else
-        #define CBITS(n) ((char)(bitstream_get(n)))
-        #define PBITS(n) (strings_base + bitstream_get(n))
-        #define IBITS(n) (bitstream_get(n))
-    #endif
+#ifdef TARGET_ZXSPEC48
+    #define CBITS(n) ((char)(bitstream_get(n)))
+    #define PBITS(n) ((char*)bitstream_get(n))
+    #define IBITS(n) ((unsigned int)bitstream_get(n))
+#else
+    #define CBITS(n) ((char)(bitstream_get(n)))
+    #define PBITS(n) (strings_base + bitstream_get(n))
+    #define IBITS(n) (bitstream_get(n))
+#endif
+event_t get_event(unsigned int index){
+
     char big_str_bit_len = events_base[2]; // todo, pack this elsewhere
     char *p = events_base + 5 + mul(index, ev_size);
     BITSTREAM_INIT(p)
@@ -158,6 +168,7 @@ event_t get_event(int index){
     ev.can_record = CBITS(1);
     ev.time = IBITS(13);
     ev.duration = IBITS(8);
+    /*ev.filtered = */CBITS(1);
     ev.title = PBITS(str_bit_len);
     ev.venue = PBITS(str_bit_len);
     ev.name = PBITS(str_bit_len);
@@ -172,8 +183,43 @@ event_t get_event(int index){
         }
     #endif
     return ev;
-    #undef CBITS
-    #undef IBITS
+}
+
+// similar to the above, but specifically for the time field, because we need to be able to
+// quickly filter based on that
+unsigned int get_event_time(unsigned int index){
+    char *p = events_base + 5 + mul(index, ev_size);
+    BITSTREAM_INIT(p)
+    CBITS(3);
+    unsigned int time = IBITS(13);
+    return time;
+}
+#undef CBITS
+#undef PBITS
+#undef IBITS
+
+void parse_ev_file_consts(){
+    num_events = (unsigned int)events_base[0] | (((unsigned int)events_base[1])<<8);
+    str_bit_len = events_base[2];
+    ev_size = (unsigned int)events_base[3];
+    day0_index = events_base[4];
+
+    for (char x = 0; x <7; x++){
+        events_per_day[x] = 0;
+    }
+    // also get events per day info
+    for (int i = 0; i<num_events; i++){
+        unsigned int t = get_event_time(i);
+        char d = day0_index;
+        while (t >= (24*60)){
+            t-=(24*60);
+            d += 1;
+            if (d >= 7){
+                d = 0;
+            }
+        }
+        events_per_day[d]++;
+    }
 }
 
 #ifdef TARGET_ZXSPEC48
@@ -676,31 +722,80 @@ uifunc event_detail(char changed, char key){
     return (uifunc)event_detail;
 }
 
+void apply_filters(){
+    clear();
+    curpos(3,11);
+    text("Filtering, please wait...");
+    // by day
+    unsigned int n_events = num_events;
+    if (filt_day != 0xff){
+        n_events = 0;
+        signed char d = filt_day;
+        d -= day0_index;
+        unsigned char page_evs = 0;
+        unsigned int page = 0;
+        if (d<0){ d += 7; }
+        for (unsigned int i = 0; i< num_events; i++){
+            char ed = 0;
+            unsigned int time = get_event_time(i);
+            while (time >= (24*60)){
+                ed += 1;
+                time -= (24*60);
+            }
+            if (ed == d){
+                filt_clear(i);
+                n_events += 1;
+                if (page_evs == 0){
+                    page_starts[page] = i;
+                    page ++;
+                }
+                page_evs += 1;
+                if (page_evs == 10){
+                    page_evs = 0;
+                }
+            }
+            else{
+                filt_set(i);
+            }
+        }
+    }
+    num_pages = div10(n_events)+1;
+}
 
 uifunc timetable_list(char changed, char key){
     static int page = 1;
-    static int n_pages = 1;
+    static char max_offset = 0;
+    //static int n_pages = 1;
     if (changed){
-        n_pages = div10(num_events)+1;
+        //n_pages = div10(num_events)+1;
         clear();
         curpos(0,0);
         text("EMF Timetable (");
-        if (filt_day == 0){
+        if (filt_day == 0xff){
             text("all days");
         }
         else {
-            text("day");
-            num_text(filt_day);
+            text(daynames[filt_day]);
         }
+        text(")");
         curpos(0,1);
         text("Pg ");
         num_text(page);
         text("/");
-        num_text(n_pages);
+        num_text(num_pages);
         curpos(12,1);
         text("N:Next,P:Prev,Q:Back");
-        for (char i = 0; i < 10; i++){
-            int index = ((page-1) * 10) + i;
+
+        unsigned int index = page_starts[page-1];
+        //for (char i = 0; i < 10; i++){
+        char i = 0;
+        max_offset = 0;
+        while (i < 10){
+            //unsigned int index = ((page-1) * 10) + i;
+            if (filt_get(index) < 0){
+                index++;
+                continue;
+            }
             if (index >= num_events){
                 break;
             }
@@ -713,11 +808,14 @@ uifunc timetable_list(char changed, char key){
             truncated_text(30,ev.title);
             curpos(2,line+1);
             truncated_text(30,ev.name);
+            i++;
+            index++;
+            max_offset ++;
         }
     }
     if (key == 'N' || key == 'n'){
         page += 1;
-        if (page > n_pages){
+        if (page > num_pages){
             page = 1;
         }
         timetable_list(1,'\0');
@@ -725,16 +823,71 @@ uifunc timetable_list(char changed, char key){
     if (key == 'P' || key == 'p'){
         page -= 1;
         if (page < 1){
-            page = n_pages;
+            page = num_pages;
         }
         timetable_list(1,'\0');
     }
     if (key >= '0' && key <= '9'){
-        ev_id = ((page-1) * 10) + key - '0';
-        return (uifunc)event_detail;
+        unsigned int index = page_starts[page-1];
+        unsigned char offset = key-'0';
+        if (offset < max_offset){
+            while (offset > 0){
+                if (filt_get(index) < 0){
+                    index++;
+                    continue;
+                }
+                index++;
+                offset--;
+            }
+            //ev_id = ((page-1) * 10) + key - '0';
+            ev_id = index;
+            return (uifunc)event_detail;
+        }
     }
-    if (key == 'Q' || key == 'q'){ return (uifunc)timetable; }
+    if (key == 'Q' || key == 'q'){
+        page = 1;
+        return (uifunc)timetable;
+    }
     return (uifunc)timetable_list;
+}
+
+uifunc daily_timetable(char changed, char key){
+    if (changed){
+        clear();
+        curpos(6,0);
+        text("EMF Timetable");
+        curpos(9,2);
+        num_text(num_events);
+        text(" events");
+        curpos(0,3);
+        text("Filter by day");
+        for (char i = 7; i>0; i--){
+            curpos(1, 4+i);
+            char d = i-1;
+            int tot_today = events_per_day[d];
+            if (tot_today > 0){
+                num_text(d);
+                text(" - ");
+                text(daynames[d]);
+                text(" (");
+                num_text(tot_today);
+                text(" events)");
+            }
+        }
+        curpos(1,20);
+        text("Q - Back");
+    }
+    if (key >= '0' && key <= '6'){
+        filt_day = key-'0';
+        filt_type = 0xff;
+        filt_title = 0;
+        apply_filters();
+        return (uifunc)timetable_list;
+    }
+    if (key == 'Q' || key == 'q'){
+        return (uifunc)timetable;
+    }
+    return (uifunc)daily_timetable;
 }
 
 uifunc timetable(char changed, char key){
@@ -768,10 +921,14 @@ uifunc timetable(char changed, char key){
     if (evs_loaded){
         // can only open a list view if the events are loaded
         if (key == 'A' || key == 'a'){
-            filt_day = 0x0;
+            filt_day = 0xff;
             filt_type = 0xff;
             filt_title = 0;
+            apply_filters();
             return (uifunc)timetable_list;
+        }
+        if (key == 'D' || key == 'd'){
+            return (uifunc)daily_timetable;
         }
     }
     if (key == 'Q' || key == 'q'){
