@@ -523,6 +523,11 @@ void apply_filters(){
                 }
             }
         }
+        // by keyword
+        if (filt_text != 0){
+            // oh boy, this will be fun
+            // TODO
+        }
         // actually set the flags below
         if (!is_in){
             filt_set(i);
