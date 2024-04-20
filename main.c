@@ -462,39 +462,51 @@ uifunc event_detail(char changed, char key){
 }
 
 void apply_filters(){
+    // This function scans all the events and marks or un-marks each one according to filters
+    // it also generates a lookup table to find the first event on any given page.
+    // when some other code renders a page it should start at the page start index and then
+    // scan forwards in the event list, stopping only when it has rendered ten events to
+    // the screen, or has reached the end of the event list.
+    // This function also calculates the total number of events and pages currently visible.
     clear();
     curpos(3,11);
-    text("Filtering, please wait...");
-    // by day
-    unsigned int n_events = num_events;
-    if (filt_day != 0xff){
-        n_events = 0;
-        signed char d = filt_day;
-        d -= day0_index;
-        unsigned char page_evs = 0;
-        unsigned int page = 0;
-        if (d<0){ d += 7; }
-        for (unsigned int i = 0; i< num_events; i++){
+    text("Filtering, please wait..."); // may take a while
+    signed char d = filt_day;
+    d -= day0_index;
+    unsigned char page_evs = 0;
+    unsigned int page = 0;
+    if (d<0){ d += 7; }
+    unsigned int n_events = 0;
+    for (unsigned int i = 0; i< num_events; i++){
+        char in = 1; // assumed to be in until found to not be in
+        // by day
+        if (filt_day != 0xff){
             char ed = 0;
             unsigned int time = get_event_time(i);
             while (time >= (24*60)){
                 ed += 1;
                 time -= (24*60);
             }
-            if (ed == d){
-                filt_clear(i);
-                n_events += 1;
-                if (page_evs == 0){
-                    page_starts[page] = i;
-                    page ++;
-                }
-                page_evs += 1;
-                if (page_evs == 10){
-                    page_evs = 0;
-                }
+            if (ed != d){
+                in = 0;
             }
-            else{
-                filt_set(i);
+        }
+        // Other filters here
+        // ...
+        // actually set the flags below
+        if (!in){
+            filt_set(i);
+        }
+        else{
+            filt_clear(i);
+            n_events += 1;
+            if (page_evs == 0){
+                page_starts[page] = i;
+                page ++;
+            }
+            page_evs += 1;
+            if (page_evs == 10){
+                page_evs = 0;
             }
         }
     }
