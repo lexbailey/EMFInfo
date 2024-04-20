@@ -1,6 +1,8 @@
 # EMF Info
 
-A utility for browsing the EMF schedule and camp map (if I get around to implementing the map) entirely offline.
+!! Warning !! This is a work-in-progress and is not finished yet.
+
+A utility for browsing the [EMF Camp](https://www.emfcamp.org/) schedule and camp map (if I get around to implementing the map) entirely offline.
 
 ## Platforms
 
