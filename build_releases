@@ -1,0 +1,12 @@
+#!/usr/bin/env xonsh
+
+$RAISE_SUBPROC_ERROR = True
+
+mkdir -p releases
+for target in [
+        "zxspec48.tap",
+        "linux",
+    ]:
+    $name = f"emfinfo_{target}"
+    make $name
+    cp $name releases/$name

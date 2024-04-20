@@ -1,0 +1,22 @@
+name: Rolling Release
+on: [push]
+jobs:
+  build-releases:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+            sudo apt-get update
+            sudo apt-get install -y sdcc xonsh build-essential
+      - name: Build release files
+        run: ./build_releases
+      - name: Save release files
+        uses: actions/upload-artifact@v4
+        with:
+          name: EMFInfo
+          path: releases/*
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: true
