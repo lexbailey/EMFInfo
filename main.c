@@ -352,19 +352,19 @@ uifunc menu(char changed, char key){
             text("E - Load event data from " STORAGE_MEDIUM);
         }
     }
-    if (key == 'T' || key == 't'){
+    if (key == 't'){
         return (uifunc)timetable;
     }
-    if (key == 'M' || key == 'm'){
+    if (key == 'm'){
         return (uifunc)map;
     }
     if (!evs_loaded){
-        if (key == 'E' || key == 'e'){
+        if (key == 'e'){
             return (uifunc)load_evs;
         }
     }
     #ifdef TARGET_PC_LINUX
-    if (key == 'Q' || key == 'q'){
+    if (key == 'q'){
         printf("exit now\n");
         return (uifunc)terminate;
     }
@@ -455,7 +455,7 @@ uifunc event_detail(char changed, char key){
         }
 
     }
-    if (key == 'Q' || key == 'q'){ return (uifunc)timetable_list; }
+    if (key == 'q'){ return (uifunc)timetable_list; }
     return (uifunc)event_detail;
 }
 
@@ -562,14 +562,14 @@ uifunc timetable_list(char changed, char key){
             max_offset ++;
         }
     }
-    if (key == 'N' || key == 'n'){
+    if (key == 'n'){
         page += 1;
         if (page > num_pages){
             page = 1;
         }
         timetable_list(1,'\0');
     }
-    if (key == 'P' || key == 'p'){
+    if (key == 'p'){
         page -= 1;
         if (page < 1){
             page = num_pages;
@@ -593,7 +593,7 @@ uifunc timetable_list(char changed, char key){
             return (uifunc)event_detail;
         }
     }
-    if (key == 'Q' || key == 'q'){
+    if (key == 'q'){
         page = 1;
         return (uifunc)timetable;
     }
@@ -633,7 +633,7 @@ uifunc daily_timetable(char changed, char key){
         apply_filters();
         return (uifunc)timetable_list;
     }
-    if (key == 'Q' || key == 'q'){
+    if (key == 'q'){
         return (uifunc)timetable;
     }
     return (uifunc)daily_timetable;
@@ -669,18 +669,18 @@ uifunc timetable(char changed, char key){
 
     if (evs_loaded){
         // can only open a list view if the events are loaded
-        if (key == 'A' || key == 'a'){
+        if (key == 'a'){
             filt_day = 0xff;
             filt_type = 0xff;
             filt_title = 0;
             apply_filters();
             return (uifunc)timetable_list;
         }
-        if (key == 'D' || key == 'd'){
+        if (key == 'd'){
             return (uifunc)daily_timetable;
         }
     }
-    if (key == 'Q' || key == 'q'){
+    if (key == 'q'){
         return (uifunc)menu;
     }
     return (uifunc)timetable;
@@ -697,7 +697,7 @@ uifunc map(char changed, char key){
         curpos(1,20);
         text("Q - Main menu");
     }
-    if (key == 'Q' || key == 'q'){
+    if (key == 'q'){
         return (uifunc)menu;
     }
     return (uifunc)map;
@@ -730,7 +730,7 @@ uifunc load_evs(char changed, char key){
                 text("press Q to go back");
             }
         }
-        if (key == 'Q' || key == 'q'){
+        if (key == 'q'){
             return (uifunc)menu;
         }
         return (uifunc)load_evs;
@@ -794,6 +794,9 @@ int main(){
         char c = '\0';
         if (!changed){
             c = get_key_press();
+            if (c >= 'A' && c <= 'Z'){
+                c += ('a'-'A');
+            }
         }
         mode = (uifunc)mode(changed, c);
         #ifdef TARGET_PC_LINUX
