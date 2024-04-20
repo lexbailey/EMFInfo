@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
 set -e
-curl -Lo sdcc-4.4.0.tar.bz2 'https://downloads.sourceforge.net/project/sdcc/sdcc-linux-amd64/4.4.0/sdcc-4.4.0-amd64-unknown-linux2.5.tar.bz2?use_mirror=autoselect'
-tar -xjf sdcc-4.4.0.tar.bz2
+URL='https://downloads.sourceforge.net/project/sdcc/sdcc-linux-amd64/4.4.0/sdcc-4.4.0-amd64-unknown-linux2.5.tar.bz2?use_mirror=autoselect'
+echo "Fetching SDCC from $URL"
+curl -Lo sdcc-4.4.0.tar.bz2 "$URL"
+echo "Unpacking SDCC"
+tar -vxjf sdcc-4.4.0.tar.bz2

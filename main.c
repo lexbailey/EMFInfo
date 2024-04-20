@@ -60,6 +60,7 @@ uifunc search(char, char);
 uifunc terminate(char, char);
 uifunc map(char, char);
 uifunc load_evs(char, char);
+uifunc bugreport(char, char);
 
 uifunc mode = (uifunc)menu;
 
@@ -112,6 +113,7 @@ unsigned int num_events = 0;
 unsigned int ev_size = 0;
 char str_bit_len = 0;
 char day0_index = 0; //what day of the week (monday=0) is the one that the epoch starts on?
+unsigned int filt_event_count = 0;
 
 #include "intmath.c"
 #include "bitstream_parse.c"
@@ -362,6 +364,24 @@ void interrupt(int sig){
     }
 #endif
 
+uifunc bugreport(char changed, char key){
+    if (changed){
+        clear();
+        curpos(0,0);
+        text("EMF Info Bug reporting");
+        curpos(0,2);
+        text("Please report bugs on GitHub");
+        curpos(0,4);
+        text("github.com/lexbailey/EMFInfo");
+        curpos(1,20);
+        text("Q - Main menu");
+    }
+    if (key == 'q'){
+        return (uifunc)menu;
+    }
+    return (uifunc)bugreport;
+}
+
 uifunc menu(char changed, char key){
     if (changed){
         clear();
@@ -375,12 +395,17 @@ uifunc menu(char changed, char key){
             curpos(1,4);
             text("E - Load event data from " STORAGE_MEDIUM);
         }
+        curpos(1,6);
+        text("B - Bug report");
     }
     if (key == 't'){
         return (uifunc)timetable;
     }
     if (key == 'm'){
         return (uifunc)map;
+    }
+    if (key == 'b'){
+        return (uifunc)bugreport;
     }
     if (!evs_loaded){
         if (key == 'e'){
@@ -483,6 +508,26 @@ uifunc event_detail(char changed, char key){
     return (uifunc)event_detail;
 }
 
+char is_substr(char *str, char *tofind){
+    char *s = str;
+    while (*s != '\0'){
+        char *s2 = s;
+        char *t2 = tofind;
+        while(1){
+            if (*t2 == '\0'){ return 1; } // end of substr, match
+            if (*s2 == '\0'){ break; } // end of string, no match
+            char c1 = *s2++;
+            char c2 = *t2++;
+            // lower both for case insensitive search
+            if (c1 >= 'A' && c1 <= 'Z'){ c1 += ('a'-'A'); }
+            if (c2 >= 'A' && c2 <= 'Z'){ c2 += ('a'-'A'); }
+            if (c1!=c2){ break; } // fail part way through, no match
+        }
+        s++;
+    }
+    return 0;
+}
+
 void apply_filters(){
     // This function scans all the events and marks or un-marks each one according to filters
     // it also generates a lookup table to find the first event on any given page.
@@ -499,7 +544,9 @@ void apply_filters(){
     unsigned int page = 0;
     if (ds<0){ ds += 7; }
     unsigned char d = (unsigned char) ds;
-    unsigned int n_events = 0;
+    if (filt_text != 0){
+        unsigned int s_len = strlen(filt_text);
+    }
     for (unsigned int i = 0; i< num_events; i++){
         unsigned char is_in = 1; // assumed to be in until found to not be in
         // by type
@@ -525,8 +572,17 @@ void apply_filters(){
         }
         // by keyword
         if (filt_text != 0){
-            // oh boy, this will be fun
-            // TODO
+            if (is_in){
+                // oh boy, this will be fun
+                event_t ev;
+                ev = get_event(i);
+                // Search finds the exact string in the title or speaker fields
+                if (!is_substr(ev.title, filt_text)){
+                    if (!is_substr(ev.name, filt_text)){
+                        is_in = 0;
+                    }
+                }
+            }
         }
         // actually set the flags below
         if (!is_in){
@@ -534,7 +590,7 @@ void apply_filters(){
         }
         else{
             filt_clear(i);
-            n_events += 1;
+            filt_event_count += 1;
             if (page_evs == 0){
                 page_starts[page] = i;
                 page ++;
@@ -545,7 +601,7 @@ void apply_filters(){
             }
         }
     }
-    num_pages = div10(n_events)+1;
+    num_pages = div10(filt_event_count)+1;
 }
 
 char searchterm[11];
@@ -643,6 +699,11 @@ uifunc timetable_list(char changed, char key){
         num_text(num_pages);
         curpos(12,1);
         text("N:Next,P:Prev,Q:Back");
+
+        if (filt_event_count == 0){
+            curpos(9,11);
+            text("(No results)");
+        }
 
         unsigned int index = page_starts[page-1];
         //for (char i = 0; i < 10; i++){
@@ -930,8 +991,10 @@ int main(){
         char c = '\0';
         if (!changed){
             c = get_key_press();
-            if (c >= 'A' && c <= 'Z'){
-                c += ('a'-'A');
+            if (mode != (uifunc)search){
+                if (c >= 'A' && c <= 'Z'){
+                    c += ('a'-'A');
+                }
             }
         }
         mode = (uifunc)mode(changed, c);
