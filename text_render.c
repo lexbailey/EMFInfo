@@ -1,16 +1,3 @@
-#ifdef TARGET_PC_LINUX
-void cleanup(){
-    printf("\033[?25h");
-    printf("\033[?1049l");
-}
-
-void interrupt(int sig){
-    if (sig == SIGINT){
-        exit(1);
-    }
-}
-#endif
-
 #ifdef TARGET_ZXSPEC48
 int strlen(char *t){
     int result = 0;

@@ -1,5 +1,3 @@
-
-
 #ifdef TARGET_ZXSPEC48
 #define __TARGET_KNOWN
 #ifndef __SDCC_z80
