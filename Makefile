@@ -12,7 +12,7 @@ bin2tap/bin2block: bin2tap/bin2block.hs
 	cd bin2tap && $(MAKE) bin2block
 
 schedule.json:
-	curl -o $@ https://www.emfcamp.org/schedule/2022.json
+	curl -Lo $@ https://www.emfcamp.org/schedule/2022.json
 
 evlist.bin strngs.bin: evbuild_intermediate ;
 

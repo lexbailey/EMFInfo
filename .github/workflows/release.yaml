@@ -14,6 +14,7 @@ jobs:
         run: |
             sudo apt-get update
             sudo apt-get install -y sdcc xonsh build-essential
+            ./get_sdcc
       - name: Build release files
         run: ./build_releases
       - name: Save release files
