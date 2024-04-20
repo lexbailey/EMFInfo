@@ -6,6 +6,10 @@ jobs:
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
+      - name: Get submodules
+        run: |
+            git submodule update --init bas2tap
+            git submodule update --init bin2tap
       - name: Install dependencies
         run: |
             sudo apt-get update
