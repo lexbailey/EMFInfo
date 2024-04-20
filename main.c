@@ -1,9 +1,23 @@
+/*
+things that need to be defined per target...
+
+#define STORAGE_MEDIUM "tape" // tape or disk, normally. used on the ui e.g."load file from tape"
+#define ENTER_KEY (0x0d) // the value of the enter key as returned by get_key_press()
+#define BACKSPACE_KEY (0x0c) // the value of the backspace key as returned by get_key_press()
+#define MAX_PRINTABLE (0x80) // The largest value that can be returned by get_key_press and still represent a printable character
+
+*/
+
+
 #ifdef TARGET_ZXSPEC48
 #define __TARGET_KNOWN
 #ifndef __SDCC_z80
 #error "The ZX Spectrum 48k target must be compiled with -mz80"
 #endif
 #define STORAGE_MEDIUM "tape"
+#define ENTER_KEY (0x0d)
+#define BACKSPACE_KEY (0x0c)
+#define MAX_PRINTABLE (0x80)
 #define LAST_K (*((char*)(23560)))
 #pragma disable_warning 84
 #pragma disable_warning 85
@@ -12,6 +26,9 @@
 #ifdef TARGET_PC_LINUX
 #define __TARGET_KNOWN
 #define STORAGE_MEDIUM "disk"
+#define ENTER_KEY ('\n')
+#define BACKSPACE_KEY (127)
+#define MAX_PRINTABLE (0x7F)
 #include <termios.h>
 #include <unistd.h>
 #include <string.h>
@@ -38,6 +55,8 @@ uifunc menu(char, char);
 uifunc event_detail(char, char);
 uifunc timetable_list(char, char);
 uifunc timetable(char, char);
+uifunc daily_timetable(char, char);
+uifunc search(char, char);
 uifunc terminate(char, char);
 uifunc map(char, char);
 uifunc load_evs(char, char);
@@ -57,9 +76,9 @@ unsigned int events_per_day[] = {0,0,0,0,0,0,0};
 unsigned int num_pages;
 unsigned int page_starts[50];
 
-char filt_day = 0x0;
-char filt_type = 0xff;
-char filt_title = 0;
+unsigned char filt_day = 0xff;
+unsigned char filt_type = 0xff;
+char *filt_text = 0;
 
 int evs_loaded = 0;
 int strings_loaded = 0;
@@ -131,8 +150,13 @@ unsigned int get_event_time(unsigned int index){
     char *p = events_base + 5 + mul(index, ev_size);
     BITSTREAM_INIT(p)
     CBITS(3);
-    unsigned int time = IBITS(13);
-    return time;
+    return IBITS(13);
+}
+
+unsigned char get_event_type(unsigned int index){
+    char *p = events_base + 5 + mul(index, ev_size);
+    BITSTREAM_INIT(p)
+    return CBITS(2);
 }
 
 // finds the filter bit for the given event index
@@ -469,30 +493,38 @@ void apply_filters(){
     clear();
     curpos(3,11);
     text("Filtering, please wait..."); // may take a while
-    signed char d = filt_day;
-    d -= day0_index;
+    signed char ds = filt_day;
+    ds -= day0_index;
     unsigned char page_evs = 0;
     unsigned int page = 0;
-    if (d<0){ d += 7; }
+    if (ds<0){ ds += 7; }
+    unsigned char d = (unsigned char) ds;
     unsigned int n_events = 0;
     for (unsigned int i = 0; i< num_events; i++){
-        char in = 1; // assumed to be in until found to not be in
-        // by day
-        if (filt_day != 0xff){
-            char ed = 0;
-            unsigned int time = get_event_time(i);
-            while (time >= (24*60)){
-                ed += 1;
-                time -= (24*60);
-            }
-            if (ed != d){
-                in = 0;
+        unsigned char is_in = 1; // assumed to be in until found to not be in
+        // by type
+        if (filt_type != 0xff){
+            unsigned char type = get_event_type(i);
+            if (type != filt_type){
+                is_in = 0;
             }
         }
-        // Other filters here
-        // ...
+        // by day
+        if (filt_day != 0xff){
+            if (is_in){
+                unsigned char ed = 0;
+                unsigned int time = get_event_time(i);
+                while (time >= (24*60)){
+                    ed += 1;
+                    time -= (24*60);
+                }
+                if (ed != d){
+                    is_in = 0;
+                }
+            }
+        }
         // actually set the flags below
-        if (!in){
+        if (!is_in){
             filt_set(i);
         }
         else{
@@ -509,6 +541,78 @@ void apply_filters(){
         }
     }
     num_pages = div10(n_events)+1;
+}
+
+char searchterm[11];
+char *search_cur;
+
+uifunc search(char changed, char key){
+    if (changed) {
+        clear();
+        curpos(0,0);
+        text("Type a search term then press");
+        curpos(0,1);
+        text("enter.");
+        #ifdef TARGET_ZXSPEC48
+            text(" CAPS-0 to delete or exit.");
+            curpos(10,11);
+            text("\x84\x8c\x8c\x8c\x8c\x8c\x8c\x8c\x8c\x8c\x8c\x88");
+            curpos(10,13);
+            text("\x81\x83\x83\x83\x83\x83\x83\x83\x83\x83\x83\x82");
+            curpos(21,12);
+            text("\x8a");
+        #else
+            text(" Backspace to delete or exit.");
+            curpos(10,11);
+            text("------------");
+            curpos(10,13);
+            text("------------");
+            curpos(21,12);
+            text("|");
+
+        #endif
+        curpos(10,12);
+        #ifdef TARGET_ZXSPEC48
+            text("\x85");
+        #else
+            text("|");
+        #endif
+        search_cur = searchterm;
+        *search_cur = '\0';
+    }
+    if (key > 0x1f && key < MAX_PRINTABLE){
+        if (search_cur > (searchterm + 9)){
+            // end of field
+        }
+        else{
+            *search_cur = key;
+            search_cur++;
+            *search_cur = '\0';
+            char new[2];
+            new[0] = key;
+            new[1] = '\0';
+            text(new);
+        }
+    }
+    if (key == BACKSPACE_KEY){
+        if (search_cur > searchterm){
+            search_cur--;
+            *search_cur = '\0';
+            curpos(11,12);
+            text("          ");
+            curpos(11,12);
+            text(searchterm);
+        }
+        else{
+            return (uifunc)timetable;
+        }
+    }
+    if (key == ENTER_KEY){
+        filt_text = searchterm;
+        apply_filters();
+        return (uifunc)timetable_list;
+    }
+    return (uifunc)search;
 }
 
 uifunc timetable_list(char changed, char key){
@@ -628,8 +732,7 @@ uifunc daily_timetable(char changed, char key){
     }
     if (key >= '0' && key <= '6'){
         filt_day = key-'0';
-        filt_type = 0xff;
-        filt_title = 0;
+        filt_text = 0;
         apply_filters();
         return (uifunc)timetable_list;
     }
@@ -658,10 +761,29 @@ uifunc timetable(char changed, char key){
             text(" events");
             curpos(1,4);
             text("A - Show All");
+            if (filt_type != 0xff){ text(" (filtered)"); }
             curpos(1,5);
             text("D - By Day");
+            if (filt_type != 0xff){ text(" (filtered)"); }
             curpos(1,6);
             text("S - Search");
+            if (filt_type != 0xff){ text(" (filtered)"); }
+            curpos(1,8);
+            text("F - Change filter mode");
+
+
+            curpos(2,10);
+            text("Filter: ");
+            if (filt_type == 0xff){
+                text("No filter");
+            }
+            else{
+                text("only ");
+                text(evstr[filt_type]);
+                text("s");
+            }
+
+
             curpos(1,20);
             text("Q - Main menu");
         }
@@ -671,13 +793,22 @@ uifunc timetable(char changed, char key){
         // can only open a list view if the events are loaded
         if (key == 'a'){
             filt_day = 0xff;
-            filt_type = 0xff;
-            filt_title = 0;
+            filt_text = 0;
             apply_filters();
             return (uifunc)timetable_list;
         }
         if (key == 'd'){
             return (uifunc)daily_timetable;
+        }
+        if (key == 's'){
+            return (uifunc)search;
+        }
+        if (key == 'f'){
+            filt_type++;
+            if (filt_type > 3){
+                filt_type = 0xff;
+            }
+            return timetable(1,0);
         }
     }
     if (key == 'q'){
