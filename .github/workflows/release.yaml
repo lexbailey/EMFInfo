@@ -13,7 +13,7 @@ jobs:
       - name: Install dependencies
         run: |
             sudo apt-get update
-            sudo apt-get install -y sdcc xonsh build-essential
+            sudo apt-get install -y xonsh build-essential
             ./get_sdcc
       - name: Build release files
         run: ./build_releases

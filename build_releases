@@ -2,7 +2,7 @@
 
 $RAISE_SUBPROC_ERROR = True
 
-$PATH.append("$PWD/sdcc-4.4.0/bin/")
+$PATH.insert(0,"$PWD/sdcc-4.4.0/bin/")
 
 mkdir -p releases
 for target in [
