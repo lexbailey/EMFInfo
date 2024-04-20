@@ -14,7 +14,7 @@ The primary supported platforms are:
 
 ZX Spectrum:
 
-    sdcc
+    sdcc (version 4.4.0 or compatible. Run ./get_sdcc to fetch and unpack it into the working directory)
     fuse-emulator-utils (optional, only used for making wav files from tap files with tap2wav)
 
 Linux:
