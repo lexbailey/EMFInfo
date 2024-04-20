@@ -11,6 +11,15 @@ bin2tap/bin2tap: bin2tap/bin2tap.hs
 bin2tap/bin2block: bin2tap/bin2block.hs
 	cd bin2tap && $(MAKE) bin2block
 
+schedule.json:
+	curl -o $@ https://www.emfcamp.org/schedule/2022.json
+
+evlist.bin strngs.bin: evbuild_intermediate ;
+
+.INTERMEDIATE: evbuild_intermediate
+evbuild_intermediate: build_events schedule.json
+	./build_events
+
 main.zxspec48.bin: main.c crt0.s
 	sdasz80 -l -o -s -g -j -y -a crt0.s 
 	sdcc -c --no-std-crt0 --std-c23 -D TARGET_ZXSPEC48 -mz80 --reserve-regs-iy $<
