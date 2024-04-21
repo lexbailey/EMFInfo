@@ -25,7 +25,7 @@ evlist.bin strngs.bin: evbuild_intermediate ;
 evbuild_intermediate: build_events schedule.json
 	./build_events
 
-main.zxspec48.bin: main.c crt0.s dzx0.s
+main.zxspec48.bin: main.c crt0.s dzx0.s mapdata.h
 	sdasz80 -l -o -s -g -j -y -a crt0.s 
 	sdasz80 -l -o -s -g -j -y -a dzx0.s 
 	sdcc -c --no-std-crt0 --std-c23 -D TARGET_ZXSPEC48 -mz80 --reserve-regs-iy $<
@@ -47,10 +47,14 @@ main.zxspec48.bin.tap: main.zxspec48.bin bin2tap/bin2tap
 	bin2tap/bin2tap 0x8000 "EMFI_BIN" $<
 
 %.zx0: %
-	$(ZX0) $<
+	-rm $@
+	$(ZX0) ./$<
 
 mapzx.bin: map/map_full.scr.zx0 map/map_north.scr.zx0 map/map_south.scr.zx0
 	cat $^ > $@
+
+mapdata.h: mapzx.bin gen_map_header
+	./gen_map_header
 
 emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap mapzx.bin.tap evlist.bin.tap strngs.bin.tap
 	cat $^ > $@

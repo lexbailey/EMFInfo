@@ -102,9 +102,7 @@ typedef struct {
 } event_t;
 
 #ifdef TARGET_ZXSPEC48
-char *map_base = (char *)0x6000;
-char *map_north_base = (char *)(0x6000+1549);
-char *map_south_base = (char *)(0x6000+1549+2030);
+#include "mapdata.h"
 char *events_base = (char *)0xA000;
 char *strings_base = 0;
 unsigned int events_len = 0;
@@ -584,6 +582,7 @@ void apply_filters(){
     clear();
     curpos(3,11);
     text("Filtering, please wait..."); // may take a while
+    filt_event_count = 0;
     signed char ds = filt_day;
     ds -= day0_index;
     unsigned char page_evs = 0;
@@ -935,7 +934,7 @@ uifunc terminate(char changed, char key){
 uifunc map(char changed, char key){
     if (changed){
         #ifdef TARGET_ZXSPEC48
-            dzx0_standard(map_base, (unsigned char *)0x4000);
+            dzx0_standard(MAP_BASE, (unsigned char *)0x4000);
         #endif
         curpos(0,0);
         text("EMF Map");
@@ -955,7 +954,7 @@ uifunc map(char changed, char key){
 uifunc mapnorth(char changed, char key){
     if (changed){
         #ifdef TARGET_ZXSPEC48
-            dzx0_standard(map_north_base, (unsigned char *)0x4000);
+            dzx0_standard(MAP_NORTH_BASE, (unsigned char *)0x4000);
         #endif
     }
     if (key == 'n'){ return (uifunc)mapnorth; }
@@ -967,7 +966,7 @@ uifunc mapnorth(char changed, char key){
 uifunc mapsouth(char changed, char key){
     if (changed){
         #ifdef TARGET_ZXSPEC48
-            dzx0_standard(map_south_base, (unsigned char *)0x4000);
+            dzx0_standard(MAP_SOUTH_BASE, (unsigned char *)0x4000);
         #endif
     }
     if (key == 'n'){ return (uifunc)mapnorth; }
@@ -1037,7 +1036,7 @@ int main(){
     #endif
     #ifdef TARGET_ZXSPEC48
         unsigned int map_len;
-        map_loaded = load_data(map_base, &map_len, "mapzx.bin") == 1;
+        map_loaded = load_data(MAP_BASE, &map_len, "mapzx.bin") == 1;
         evs_loaded = load_data(events_base, &events_len, "evlist.bin") == 1;
         if (! evs_loaded){
             curpos(0,0);

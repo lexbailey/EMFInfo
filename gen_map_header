@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+FULL=`wc -c < map/map_full.scr.zx0`
+NORTH=`wc -c < map/map_north.scr.zx0`
+echo "#define MAP_BASE ((char *)0x6000)" > mapdata.h
+echo "#define MAP_NORTH_BASE ((char *)(0x6000+$FULL))" >> mapdata.h
+echo "#define MAP_SOUTH_BASE ((char *)(0x6000+$FULL+$NORTH))" >> mapdata.h

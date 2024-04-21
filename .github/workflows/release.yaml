@@ -10,6 +10,7 @@ jobs:
         run: |
             git submodule update --init bas2tap
             git submodule update --init bin2tap
+            git submodule update --init ZX0
       - name: Install dependencies
         run: |
             sudo apt-get update
