@@ -59,8 +59,11 @@ uifunc daily_timetable(char, char);
 uifunc search(char, char);
 uifunc terminate(char, char);
 uifunc map(char, char);
+uifunc mapnorth(char, char);
+uifunc mapsouth(char, char);
 uifunc load_evs(char, char);
 uifunc bugreport(char, char);
+uifunc credits(char, char);
 
 uifunc mode = (uifunc)menu;
 
@@ -81,6 +84,7 @@ unsigned char filt_day = 0xff;
 unsigned char filt_type = 0xff;
 char *filt_text = 0;
 
+int map_loaded = 0;
 int evs_loaded = 0;
 int strings_loaded = 0;
 
@@ -98,6 +102,9 @@ typedef struct {
 } event_t;
 
 #ifdef TARGET_ZXSPEC48
+char *map_base = (char *)0x6000;
+char *map_north_base = (char *)(0x6000+1549);
+char *map_south_base = (char *)(0x6000+1549+2030);
 char *events_base = (char *)0xA000;
 char *strings_base = 0;
 unsigned int events_len = 0;
@@ -118,6 +125,8 @@ unsigned int filt_event_count = 0;
 #include "intmath.c"
 #include "bitstream_parse.c"
 #include "text_render.c"
+
+extern void dzx0_standard(unsigned char *src, unsigned char *dst);
 
 event_t get_event(unsigned int index){
 
@@ -382,6 +391,36 @@ uifunc bugreport(char changed, char key){
     return (uifunc)bugreport;
 }
 
+uifunc credits(char changed, char key){
+    if (changed){
+        clear();
+        curpos(0,0);
+        text("EMF Info");
+        curpos(0,2);
+        text("Written by Lex Bailey");
+        curpos(0,4);
+        text("EMF Info uses ZX0 for compressed");
+        curpos(0,5);
+        text("map images.");
+        curpos(0,7);
+        text("Map based on data \x7f Electromag-");
+        curpos(0,8);
+        text("netic Field and OpenStreetMap");
+        curpos(0,9);
+        text("contributers.");
+        curpos(0,11);
+        text("Timetable data \x7f Electromagnetic");
+        curpos(0,12);
+        text("Field.");
+        curpos(1,20);
+        text("Q - Main menu");
+    }
+    if (key == 'q'){
+        return (uifunc)menu;
+    }
+    return (uifunc)credits;
+}
+
 uifunc menu(char changed, char key){
     if (changed){
         clear();
@@ -397,6 +436,8 @@ uifunc menu(char changed, char key){
         }
         curpos(1,6);
         text("B - Bug report");
+        curpos(1,7);
+        text("C - Credits");
     }
     if (key == 't'){
         return (uifunc)timetable;
@@ -406,6 +447,9 @@ uifunc menu(char changed, char key){
     }
     if (key == 'b'){
         return (uifunc)bugreport;
+    }
+    if (key == 'c'){
+        return (uifunc)credits;
     }
     if (!evs_loaded){
         if (key == 'e'){
@@ -888,16 +932,40 @@ uifunc terminate(char changed, char key){
 
 uifunc map(char changed, char key){
     if (changed){
-        clear();
+        dzx0_standard(map_base, (unsigned char *)0x4000);
         curpos(0,0);
-        text("      EMF Map");
-        curpos(1,20);
+        text("EMF Map");
+        curpos(1,2);
+        text("N - Zoom North");
+        curpos(1,3);
+        text("S - Zoom South");
+        curpos(1,4);
         text("Q - Main menu");
     }
-    if (key == 'q'){
-        return (uifunc)menu;
-    }
+    if (key == 'n'){ return (uifunc)mapnorth; }
+    if (key == 's'){ return (uifunc)mapsouth; }
+    if (key == 'q'){ return (uifunc)menu; }
     return (uifunc)map;
+}
+
+uifunc mapnorth(char changed, char key){
+    if (changed){
+        dzx0_standard(map_north_base, (unsigned char *)0x4000);
+    }
+    if (key == 'n'){ return (uifunc)mapnorth; }
+    if (key == 's'){ return (uifunc)mapsouth; }
+    if (key == 'q'){ return (uifunc)map; }
+    return (uifunc)mapnorth;
+}
+
+uifunc mapsouth(char changed, char key){
+    if (changed){
+        dzx0_standard(map_south_base, (unsigned char *)0x4000);
+    }
+    if (key == 'n'){ return (uifunc)mapnorth; }
+    if (key == 's'){ return (uifunc)mapsouth; }
+    if (key == 'q'){ return (uifunc)map; }
+    return (uifunc)mapsouth;
 }
 
 uifunc load_evs(char changed, char key){
@@ -959,6 +1027,8 @@ int main(){
         }
     #endif
     #ifdef TARGET_ZXSPEC48
+        unsigned int map_len;
+        map_loaded = load_data(map_base, &map_len, "mapzx.bin") == 1;
         evs_loaded = load_data(events_base, &events_len, "evlist.bin") == 1;
         if (! evs_loaded){
             curpos(0,0);

@@ -3,6 +3,7 @@
 set -e
 
 grep ^A crt0.rel |  sed 's/A \([^ ]\+\) size \([0-9a-fA-F]\+\) flags [0-9a-fA-F]\+ addr.*/\1 \2/' > crt0_areas
+grep ^A dzx0.rel |  sed 's/A \([^ ]\+\) size \([0-9a-fA-F]\+\) flags [0-9a-fA-F]\+ addr.*/\1 \2/' > dzx0_areas
 grep ^A main.rel |  sed 's/A \([^ ]\+\) size \([0-9a-fA-F]\+\) flags [0-9a-fA-F]\+ addr.*/\1 \2/' > main_areas
 
 LNK=zxspec48.lnk
@@ -10,6 +11,7 @@ echo "-u" > $LNK
 echo "-m" >> $LNK
 echo "-i main.ihx" >> $LNK
 echo "crt0.rel" >> $LNK
+echo "dzx0.rel" >> $LNK
 echo "main.rel" >> $LNK
 
 # now figure out where all the areas go...
@@ -17,9 +19,17 @@ python3 >> $LNK << EOF
 def sizes(fname):
     return {l.split(' ')[0][1:]: int(l.split(' ')[1], 16) for l in open(fname).read().strip().split('\n')}
 crt0=sizes('crt0_areas')
+dzx0=sizes('dzx0_areas')
 main=sizes('main_areas')
-allareas = crt0.copy()
-allareas.update(main)
+allareas = {}
+for d in [crt0, dzx0, main]:
+    for k,v in d.items():
+        if k not in allareas:
+            allareas[k] = 0
+        allareas[k] += v
+#allareas = crt0.copy()
+#allareas.update(main)
+#allareas.update(main)
 areas = ['HEADER' , 'HEADER0' , 'CODE' , 'DATA' , 'INITIALIZED' , 'DABS' , 'HOME' , 'BEFORE_GS_INIT', 'GSINIT' , 'GSFINAL' , 'AFTER_GS_INIT', 'INITIALIZER' , 'CABS']
 start = 0x8000
 init = 0
@@ -37,3 +47,4 @@ EOF
 
 rm main_areas
 rm crt0_areas
+rm dzx0_areas

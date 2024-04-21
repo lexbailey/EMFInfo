@@ -7,3 +7,6 @@
 [submodule "zxemf-data"]
 	path = zxemf-data
 	url = git@github.com:aquila12/zxemf-data.git
+[submodule "ZX0"]
+	path = ZX0
+	url = https://github.com/einar-saukas/ZX0.git
