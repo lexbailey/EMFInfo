@@ -126,7 +126,9 @@ unsigned int filt_event_count = 0;
 #include "bitstream_parse.c"
 #include "text_render.c"
 
+#ifdef TARGET_ZXSPEC48
 extern void dzx0_standard(unsigned char *src, unsigned char *dst);
+#endif
 
 event_t get_event(unsigned int index){
 
@@ -932,7 +934,9 @@ uifunc terminate(char changed, char key){
 
 uifunc map(char changed, char key){
     if (changed){
-        dzx0_standard(map_base, (unsigned char *)0x4000);
+        #ifdef TARGET_ZXSPEC48
+            dzx0_standard(map_base, (unsigned char *)0x4000);
+        #endif
         curpos(0,0);
         text("EMF Map");
         curpos(1,2);
@@ -950,7 +954,9 @@ uifunc map(char changed, char key){
 
 uifunc mapnorth(char changed, char key){
     if (changed){
-        dzx0_standard(map_north_base, (unsigned char *)0x4000);
+        #ifdef TARGET_ZXSPEC48
+            dzx0_standard(map_north_base, (unsigned char *)0x4000);
+        #endif
     }
     if (key == 'n'){ return (uifunc)mapnorth; }
     if (key == 's'){ return (uifunc)mapsouth; }
@@ -960,7 +966,9 @@ uifunc mapnorth(char changed, char key){
 
 uifunc mapsouth(char changed, char key){
     if (changed){
-        dzx0_standard(map_south_base, (unsigned char *)0x4000);
+        #ifdef TARGET_ZXSPEC48
+            dzx0_standard(map_south_base, (unsigned char *)0x4000);
+        #endif
     }
     if (key == 'n'){ return (uifunc)mapnorth; }
     if (key == 's'){ return (uifunc)mapsouth; }
@@ -1001,6 +1009,7 @@ uifunc load_evs(char changed, char key){
         return (uifunc)load_evs;
     #endif
 }
+
 
 int main(){
     init_text();
