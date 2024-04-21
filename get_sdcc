@@ -4,4 +4,4 @@ URL='https://downloads.sourceforge.net/project/sdcc/sdcc-linux-amd64/4.4.0/sdcc-
 echo "Fetching SDCC from $URL"
 curl -Lo sdcc-4.4.0.tar.bz2 "$URL"
 echo "Unpacking SDCC"
-tar -vxjf sdcc-4.4.0.tar.bz2
+tar -xjf sdcc-4.4.0.tar.bz2
