@@ -13,7 +13,7 @@ bin2tap/bin2tap: bin2tap/bin2tap.hs
 bin2tap/bin2block: bin2tap/bin2block.hs
 	cd bin2tap && $(MAKE) bin2block
 
-$(ZX0):
+$(ZX0): ZX0/src/zx0.c
 	cd ZX0/src && $(MAKE) zx0
 
 schedule.json:
