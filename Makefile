@@ -46,7 +46,7 @@ main.zxspec48.bin: main.c crt0.s dzx0.s mapdata.h
 main.zxspec48.bin.tap: main.zxspec48.bin bin2tap/bin2tap
 	bin2tap/bin2tap 0x8000 "EMFI_BIN" $<
 
-%.zx0: %
+%.zx0: % $(ZX0)
 	-rm $@
 	$(ZX0) ./$<
 
