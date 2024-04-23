@@ -1,48 +1,4 @@
-/*
-things that need to be defined per target...
-
-#define STORAGE_MEDIUM "tape" // tape or disk, normally. used on the ui e.g."load file from tape"
-#define ENTER_KEY (0x0d) // the value of the enter key as returned by get_key_press()
-#define BACKSPACE_KEY (0x0c) // the value of the backspace key as returned by get_key_press()
-#define MAX_PRINTABLE (0x80) // The largest value that can be returned by get_key_press and still represent a printable character
-
-*/
-
-
-#ifdef TARGET_ZXSPEC48
-#define __TARGET_KNOWN
-#ifndef __SDCC_z80
-#error "The ZX Spectrum 48k target must be compiled with -mz80"
-#endif
-#define STORAGE_MEDIUM "tape"
-#define ENTER_KEY (0x0d)
-#define BACKSPACE_KEY (0x0c)
-#define MAX_PRINTABLE (0x80)
-#define LAST_K (*((char*)(23560)))
-#pragma disable_warning 84
-#pragma disable_warning 85
-#endif
-
-#ifdef TARGET_PC_LINUX
-#define __TARGET_KNOWN
-#define STORAGE_MEDIUM "disk"
-#define ENTER_KEY ('\n')
-#define BACKSPACE_KEY (127)
-#define MAX_PRINTABLE (0x7F)
-#include <termios.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <signal.h>
-#include <stdint.h>
-#endif
-
-// To port this to another system, add extra TARGET option checks here
-
-#ifndef __TARGET_KNOWN
-#error "Unknown target. Please define one of the TARGET_ preprocessor defs."
-#endif
+#include "target_specific.h"
 
 #define EVTYPE_TALK (0)
 #define EVTYPE_PERFORMANCE (1)
@@ -102,7 +58,6 @@ typedef struct {
 } event_t;
 
 #ifdef TARGET_ZXSPEC48
-#include "mapdata.h"
 char *events_base = (char *)0xA000;
 char *strings_base = 0;
 unsigned int events_len = 0;
@@ -123,13 +78,10 @@ unsigned int filt_event_count = 0;
 #include "intmath.c"
 #include "bitstream_parse.c"
 #include "text_render.c"
-
-#ifdef TARGET_ZXSPEC48
-extern void dzx0_standard(unsigned char *src, unsigned char *dst);
-#endif
+#include "image_render.c"
+#include "file_io.c"
 
 event_t get_event(unsigned int index){
-
     char big_str_bit_len = events_base[2]; // todo, pack this elsewhere
     char *p = events_base + 5 + mul(index, ev_size);
     BITSTREAM_INIT(p)
@@ -202,176 +154,6 @@ void parse_ev_file_consts(){
         events_per_day[d]++;
     }
 }
-
-#ifdef TARGET_PC_LINUX
-void cleanup(){
-    printf("\033[?25h");
-    printf("\033[?1049l");
-}
-
-void interrupt(int sig){
-    if (sig == SIGINT){
-        exit(1);
-    }
-}
-#endif
-
-
-#ifdef TARGET_ZXSPEC48
-    int load_recoverable(unsigned char type, void* p, unsigned int len) __naked{
-        p; // de
-        len; // stack
-        type; // is in a already. good
-        __asm__(
-            "push ix\n\t"
-            "push de\n\t"
-            "pop ix\n\t"
-            "inc sp\n\t"
-            "inc sp\n\t"
-            "inc sp\n\t"
-            "inc sp\n\t"
-            "pop de\n\t"
-            "dec sp\n\t"
-            "dec sp\n\t"
-            "dec sp\n\t"
-            "dec sp\n\t"
-            "dec sp\n\t"
-            "dec sp\n\t"
-            "scf\n\t" // set carry flag to indicate load (not verify)
-            // some fuckery to make the loader routine not call the error handler
-            "inc d\n\t"
-            "ex af,af'\n\t"
-            "dec d\n\t"
-            "di\n\t"
-            "call 0x0562\n" // calling into the middle of the loader function intentionally, skipping the tail-call like error handler
-            "push af\n\t"// stash carry flag
-            // restore the border
-            "ld a,(0x5C48)\n\t"
-            "and #0x38\n\t"
-            "rrca\n\t"
-            "rrca\n\t"
-            "rrca\n\t"
-            "out (0xfe),a\n\t"
-
-            // check break key
-            "ld a,#0x7f\n\t"
-            "in a,(0xfe)\n\t"
-            "rra\n\t"
-            "ei\n\t"
-
-            // Determine why the loader stopped and return accordingly
-            "jr c,#load_custom_ret_end\n\t"
-            "ld de, #2\n\t"
-            "pop af\n\t"
-            "pop ix\n\t"
-            "jr load_custom_done\n"
-            "load_custom_ret_end:\n\t"
-            "pop af\n\t"
-            "pop ix\n\t"
-            "ld de, #1\n\t"
-            "jr c, db_loadsuccess\n\t"
-            "ld de, #0\n"
-            "db_loadsuccess:\n\t"
-            "load_custom_done:\n\t"
-            "inc sp\n\t"
-            "inc sp\n\t"
-            "inc sp\n\t"
-            "inc sp\n\t"
-            "ret\n\t"
-        );
-        return 0;
-    }
-
-    int load_data_block(void* p, unsigned int len){
-        return load_recoverable(0xff,p,len);
-    }
-    
-    int load_header(void* p){
-        return load_recoverable(0x00,p,17);
-    }
-    
-    int load_data(void *p, unsigned int *len, char *name){
-        noscroll();
-        text("\r");
-        while (1){
-            int ret = load_header(p);
-            if (ret == 2){
-                return 2;
-            }
-            if (ret != 1){
-                noscroll();
-                text("skip\r");
-                continue;
-            }
-            int rlen = ((int)(((char*)p)[11])) | (((int)(((char *)p)[12]))<<8);
-            ((char*)p)[11] = '\0';
-            char match = 1;
-            for (int i = 0; i<strlen(name); i++){
-                if (name[i] != ((char*)p)[1+i]){
-                    match = 0;
-                    break;
-                }
-            }
-            if (!match){
-                noscroll();
-                text("skip: ");
-                text(((char *)p)+1);
-                text("\r");
-                continue;
-            }
-            noscroll();
-            text("found: ");
-            text(((char *)p)+1);
-            text("\r");
-            *len = rlen;
-            break;
-        }
-        return load_data_block(p, *len);
-    }
-#endif
-
-#ifdef TARGET_PC_LINUX
-    size_t flen(char *fname){
-        FILE *f = fopen(fname, "rb");
-        if (f == NULL){
-            return 0;
-        }
-        if (fseek(f, 0, SEEK_END)){
-            fclose(f);
-            return 0;
-        }
-        size_t len = ftell(f);
-        fclose(f);
-        return len;
-    }
-
-    int load_data(void* p, size_t *len, char *fname){
-        FILE *f = fopen(fname, "rb");
-        if (f == NULL){
-            return 0;
-        }
-        if (fseek(f, 0, SEEK_END)){
-            fclose(f);
-            return 0;
-        }
-        size_t a_len = ftell(f);
-        if (*len > 0 && *len != a_len){
-            fclose(f);
-            return 0;
-        } 
-        if (fseek(f, 0, SEEK_SET)){
-            fclose(f);
-            return 0;
-        }
-        size_t r = fread(p, 1, *len, f);
-        if (r != *len){
-            fclose(f);
-            return 0;
-        }
-        fclose(f);
-        return 1;
-    }
-#endif
 
 uifunc bugreport(char changed, char key){
     if (changed){
@@ -933,9 +715,7 @@ uifunc terminate(char changed, char key){
 
 uifunc map(char changed, char key){
     if (changed){
-        #ifdef TARGET_ZXSPEC48
-            dzx0_standard(MAP_BASE, (unsigned char *)0x4000);
-        #endif
+        show_image(MAP_BASE);
         curpos(0,0);
         text("EMF Map");
         curpos(1,2);
@@ -953,9 +733,7 @@ uifunc map(char changed, char key){
 
 uifunc mapnorth(char changed, char key){
     if (changed){
-        #ifdef TARGET_ZXSPEC48
-            dzx0_standard(MAP_NORTH_BASE, (unsigned char *)0x4000);
-        #endif
+        show_image(MAP_NORTH_BASE);
     }
     if (key == 'n'){ return (uifunc)mapnorth; }
     if (key == 's'){ return (uifunc)mapsouth; }
@@ -965,9 +743,7 @@ uifunc mapnorth(char changed, char key){
 
 uifunc mapsouth(char changed, char key){
     if (changed){
-        #ifdef TARGET_ZXSPEC48
-            dzx0_standard(MAP_SOUTH_BASE, (unsigned char *)0x4000);
-        #endif
+        show_image(MAP_SOUTH_BASE);
     }
     if (key == 'n'){ return (uifunc)mapnorth; }
     if (key == 's'){ return (uifunc)mapsouth; }
