@@ -176,10 +176,11 @@ void truncated_text(char max, char* s){
     if (l > max){
         tmp = s[max];
         s[max] = '\0';
-    }
-    text(s);
-    if (l > max){
+        text(s);
         s[max] = tmp;
+    }
+    else{
+        text(s);
     }
 }
 
