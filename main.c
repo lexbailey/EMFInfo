@@ -1,4 +1,4 @@
-#include "target_specific.h"
+#include "target_defs.h"
 
 #define EVTYPE_TALK (0)
 #define EVTYPE_PERFORMANCE (1)
@@ -57,18 +57,7 @@ typedef struct {
     char *descr;
 } event_t;
 
-#ifdef TARGET_ZXSPEC48
-char *events_base = (char *)0xA000;
-char *strings_base = 0;
-unsigned int events_len = 0;
-unsigned int strings_len = 0;
-#endif
-#ifdef TARGET_PC_LINUX
-uint8_t *events_base;
-uint8_t *strings_base;
-size_t events_len = 0;
-size_t strings_len = 0;
-#endif
+#include "target_vars.c"
 unsigned int num_events = 0;
 unsigned int ev_size = 0;
 char str_bit_len = 0;
@@ -440,31 +429,15 @@ uifunc search(char changed, char key){
         curpos(0,0);
         text("Type a search term then press");
         curpos(0,1);
-        text("enter.");
-        #ifdef TARGET_ZXSPEC48
-            text(" CAPS-0 to delete or exit.");
-            curpos(10,11);
-            text("\x84\x8c\x8c\x8c\x8c\x8c\x8c\x8c\x8c\x8c\x8c\x88");
-            curpos(10,13);
-            text("\x81\x83\x83\x83\x83\x83\x83\x83\x83\x83\x83\x82");
-            curpos(21,12);
-            text("\x8a");
-        #else
-            text(" Backspace to delete or exit.");
-            curpos(10,11);
-            text("------------");
-            curpos(10,13);
-            text("------------");
-            curpos(21,12);
-            text("|");
-
-        #endif
+        text("enter. " BACKSPACE_NAME " to delete or exit.");
+        curpos(10,11);
+        text(BOXDRAW_BR BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_BL);
+        curpos(10,13);
+        text(BOXDRAW_TR BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_TL);
+        curpos(21,12);
+        text(BOXDRAW_R);
         curpos(10,12);
-        #ifdef TARGET_ZXSPEC48
-            text("\x85");
-        #else
-            text("|");
-        #endif
+        text(BOXDRAW_L);
         search_cur = searchterm;
         *search_cur = '\0';
     }
