@@ -22,6 +22,8 @@ things that need to be defined per target...
 #define BOXDRAW_B "?" // Bottom
 #define BOXDRAW_T "?" // Top
 
+// defined if main is allowed to return
+#define MAIN_CAN_RETURN
 */
 
 #ifdef TARGET_ZXSPEC48
@@ -74,6 +76,7 @@ things that need to be defined per target...
     #define MAP_BASE (map_full)
     #define MAP_NORTH_BASE (map_north)
     #define MAP_SOUTH_BASE (map_south)
+    #define MAIN_CAN_RETURN
 #endif
 
 // To port this to another system, add extra TARGET option checks here

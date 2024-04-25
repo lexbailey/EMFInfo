@@ -13,7 +13,9 @@ uifunc timetable_list(char, char);
 uifunc timetable(char, char);
 uifunc daily_timetable(char, char);
 uifunc search(char, char);
-uifunc terminate(char, char);
+#ifdef MAIN_CAN_RETURN
+    uifunc terminate(char, char);
+#endif
 uifunc map(char, char);
 uifunc mapnorth(char, char);
 uifunc mapsouth(char, char);
@@ -86,13 +88,11 @@ event_t get_event(unsigned int index){
     ev.pronouns = PBITS(str_bit_len);
     ev.cost = PBITS(str_bit_len);
     ev.descr = strings_base + IBITS(big_str_bit_len); // TODO this is wrong
-    #ifdef TARGET_ZXSPEC48
-        char **s = &ev.title;
-        for (unsigned char x = 5; x>0;x--){
-            *s += (unsigned int)strings_base;
-            s++;
-        }
-    #endif
+    char **s = &ev.title;
+    for (unsigned char x = 5; x>0;x--){
+        *s += (BITSTREAM_OUT_TYPE)strings_base;
+        s++;
+    }
     return ev;
 }
 
@@ -227,7 +227,7 @@ uifunc menu(char changed, char key){
             return (uifunc)load_evs;
         }
     }
-    #ifdef TARGET_PC_LINUX
+    #ifdef MAIN_CAN_RETURN
     if (key == 'q'){
         printf("exit now\n");
         return (uifunc)terminate;
@@ -683,8 +683,10 @@ uifunc timetable(char changed, char key){
     return (uifunc)timetable;
 }
 
-uifunc terminate(char changed, char key){
-}
+#ifdef MAIN_CAN_RETURN
+    uifunc terminate(char changed, char key){
+    }
+#endif
 
 uifunc map(char changed, char key){
     if (changed){
@@ -825,7 +827,7 @@ int main(){
             }
         }
         mode = (uifunc)mode(changed, c);
-        #ifdef TARGET_PC_LINUX
+        #ifdef MAIN_CAN_RETURN
             if (mode == (uifunc)terminate){
                 return 0;
             }

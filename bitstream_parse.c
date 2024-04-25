@@ -1,7 +1,14 @@
 char *bitstream_ptr;
 signed char bitstream_pos;
 
-unsigned int bitstream_get(char bits){
+#ifdef TARGET_ZXSPEC48
+    #define BITSTREAM_OUT_TYPE unsigned int
+#endif
+#ifdef TARGET_PC_LINUX
+    #define BITSTREAM_OUT_TYPE long int
+#endif
+
+BITSTREAM_OUT_TYPE bitstream_get(char bits){
     char rembits = bits;
     unsigned int outval = 0;
     while (rembits) {
@@ -24,7 +31,7 @@ unsigned int bitstream_get(char bits){
     #define IBITS(n) ((unsigned int)bitstream_get(n))
 #else
     #define CBITS(n) ((char)(bitstream_get(n)))
-    #define PBITS(n) (strings_base + bitstream_get(n))
+    #define PBITS(n) ((char *)bitstream_get(n))
     #define IBITS(n) (bitstream_get(n))
 #endif
 
