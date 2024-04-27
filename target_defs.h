@@ -24,6 +24,18 @@ things that need to be defined per target...
 
 // defined if main is allowed to return
 #define MAIN_CAN_RETURN
+
+// defined if ZX0 is used on this platform
+#define USES_ZX0
+
+#define COPYRIGHT "" // a string containin just the copyright character
+
+#define LOADMODE LM_MALLOC // must be equal to LM_MALLOC or LM_STATIC. malloc will allocate space with malloc before loading a file. static assumes there enough space statically allocated
+
+// names of the various module files
+#define FILE_MAP "mapzx.bin"
+#define FILE_EVENTS "evlist.bin"
+#define FILE_STRINGS "strngs.bin"
 */
 
 #ifdef TARGET_ZXSPEC48
@@ -48,7 +60,13 @@ things that need to be defined per target...
     #pragma disable_warning 84
     #pragma disable_warning 85
     #include "mapdata.h"
+    #define USES_ZX0
     extern void dzx0_standard(unsigned char *src, unsigned char *dst);
+    #define COPYRIGHT "\x7f"
+    #define LOADMODE LM_STATIC
+    #define FILE_MAP "mapzx.bin"
+    #define FILE_EVENTS "evlist.bin"
+    #define FILE_STRINGS "strngs.bin"
 #endif
 
 #ifdef TARGET_PC_LINUX
@@ -77,6 +95,11 @@ things that need to be defined per target...
     #define MAP_NORTH_BASE (map_north)
     #define MAP_SOUTH_BASE (map_south)
     #define MAIN_CAN_RETURN
+    #define COPYRIGHT "\xc2\xa9"
+    #define LOADMODE LM_MALLOC
+    #define FILE_MAP "map.png"
+    #define FILE_EVENTS "evlist.bin"
+    #define FILE_STRINGS "strngs.bin"
 #endif
 
 // To port this to another system, add extra TARGET option checks here

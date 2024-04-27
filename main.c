@@ -1,3 +1,6 @@
+#define LM_MALLOC (1)
+#define LM_STATIC (2)
+
 #include "target_defs.h"
 
 #define EVTYPE_TALK (0)
@@ -19,7 +22,7 @@ uifunc search(char, char);
 uifunc map(char, char);
 uifunc mapnorth(char, char);
 uifunc mapsouth(char, char);
-uifunc load_evs(char, char);
+uifunc modules(char, char);
 uifunc bugreport(char, char);
 uifunc credits(char, char);
 
@@ -169,18 +172,20 @@ uifunc credits(char changed, char key){
         text("EMF Info");
         curpos(0,2);
         text("Written by Lex Bailey");
-        curpos(0,4);
-        text("EMF Info uses ZX0 for compressed");
-        curpos(0,5);
-        text("map images.");
+        #ifdef USES_ZX0
+            curpos(0,4);
+            text("EMF Info uses ZX0 for compressed");
+            curpos(0,5);
+            text("map images.");
+        #endif
         curpos(0,7);
-        text("Map based on data \x7f Electromag-");
+        text("Map based on data " COPYRIGHT " Electromag-");
         curpos(0,8);
         text("netic Field and OpenStreetMap");
         curpos(0,9);
         text("contributers.");
         curpos(0,11);
-        text("Timetable data \x7f Electromagnetic");
+        text("Timetable data " COPYRIGHT " Electromagnetic");
         curpos(0,12);
         text("Field.");
         curpos(1,20);
@@ -201,10 +206,8 @@ uifunc menu(char changed, char key){
         text("T - Timetable");
         curpos(1,3);
         text("M - Map");
-        if (!evs_loaded){
-            curpos(1,4);
-            text("E - Load event data from " STORAGE_MEDIUM);
-        }
+        curpos(1,4);
+        text("L - Load modules from " STORAGE_MEDIUM);
         curpos(1,6);
         text("B - Bug report");
         curpos(1,7);
@@ -222,10 +225,8 @@ uifunc menu(char changed, char key){
     if (key == 'c'){
         return (uifunc)credits;
     }
-    if (!evs_loaded){
-        if (key == 'e'){
-            return (uifunc)load_evs;
-        }
+    if (key == 'l'){
+        return (uifunc)modules;
     }
     #ifdef MAIN_CAN_RETURN
     if (key == 'q'){
@@ -690,18 +691,27 @@ uifunc timetable(char changed, char key){
 
 uifunc map(char changed, char key){
     if (changed){
-        show_image(MAP_BASE);
-        curpos(0,0);
-        text("EMF Map");
-        curpos(1,2);
-        text("N - Zoom North");
-        curpos(1,3);
-        text("S - Zoom South");
+        if (!map_loaded){
+            clear();
+            curpos(0,0);
+            text("Map module not loaded");
+        }
+        else{
+            show_image(MAP_BASE);
+            curpos(0,0);
+            text("EMF Map");
+            curpos(1,2);
+            text("N - Zoom North");
+            curpos(1,3);
+            text("S - Zoom South");
+        }
         curpos(1,4);
         text("Q - Main menu");
     }
-    if (key == 'n'){ return (uifunc)mapnorth; }
-    if (key == 's'){ return (uifunc)mapsouth; }
+    if (map_loaded){
+        if (key == 'n'){ return (uifunc)mapnorth; }
+        if (key == 's'){ return (uifunc)mapsouth; }
+    }
     if (key == 'q'){ return (uifunc)menu; }
     return (uifunc)map;
 }
@@ -726,38 +736,44 @@ uifunc mapsouth(char changed, char key){
     return (uifunc)mapsouth;
 }
 
-uifunc load_evs(char changed, char key){
-    #ifdef TARGET_PC_LINUX
-        events_len = flen("evlist.bin");
-        evs_loaded = load_data(events_base, &events_len, "evlist.bin") == 1;
-        if (evs_loaded){
-            parse_ev_file_consts();
-        }
+uifunc modules(char changed, char key){
+    if (changed){
+        clear();
+        curpos(0,0);
+        text("Manage loaded modules");
+
+        curpos(0,2);
+        text("ID | Name             | Loaded?");
+        curpos(0,3);
+        text("-------------------------------");
+        curpos(0,4);
+        text(" M | Map data         |");
+        curpos(0,5);
+        text(" E | Event list       |");
+        curpos(0,6);
+        text(" S | Event text       |");
+        curpos(0,7);
+        text(" 1 | Descriptions 1   |");
+        curpos(0,8);
+        text("-------------------------------");
+
+        curpos(24,4);
+        if (map_loaded){text("Yes");}else{text("No");}
+        curpos(24,5);
+        if (evs_loaded){text("Yes");}else{text("No");}
+        curpos(24,6);
+        if (strings_loaded){text("Yes");}else{text("No");}
+
+        curpos(1,19);
+        text("Type an ID to load a module");
+
+        curpos(1,21);
+        text("Q - Main menu");
+    }
+    if (key == 'q'){
         return (uifunc)menu;
-    #endif
-    #ifdef TARGET_ZXSPEC48
-        if (changed){
-            clear();
-            curpos(0,0);
-            text("Cue tape to evlist.bin");
-            curpos(0,1);
-            text("and press play.");
-            curpos(0,5);
-            text("To cancel press break.");
-            evs_loaded = load_data(events_base, &events_len, "evlist.bin") == 1;
-            if (evs_loaded){
-                parse_ev_file_consts();
-                return (uifunc)menu;
-            }
-            else{
-                text("press Q to go back");
-            }
-        }
-        if (key == 'q'){
-            return (uifunc)menu;
-        }
-        return (uifunc)load_evs;
-    #endif
+    }
+    return (uifunc)modules;
 }
 
 
@@ -767,52 +783,27 @@ int main(){
     #ifdef TARGET_PC_LINUX
         atexit(cleanup);
         signal(SIGINT, interrupt);
-        events_len = flen("evlist.bin");
-        strings_len = flen("strngs.bin");
+    #endif
+
+    #if LOADMODE == LM_MALLOC
+        map_len = flen(FILE_MAP);
+        events_len = flen(FILE_EVENTS);
+        strings_len = flen(FILE_STRINGS);
         events_base = malloc(sizeof(char) * events_len);
         strings_base = malloc(sizeof(char) * strings_len);
-        evs_loaded = load_data(events_base, &events_len, "evlist.bin") == 1;
-        strings_loaded = load_data(strings_base, &strings_len, "strngs.bin") == 1;
-        if (!evs_loaded || !strings_loaded){
-            curpos(0,0);
-            text("Error: Unable to load data");
-            perror("a");
-            curpos(0,5);
-            text("press a key to continue");
-            get_key_press();
-        }
-        else{
-            parse_ev_file_consts();
-        }
+    #else
+        #if LOADMODE == LM_STATIC
+        #else
+            #error No valid LOADMODE defined
+        #endif
     #endif
+    map_loaded = load_data(MAP_BASE, &map_len, FILE_MAP) == 1;
+    evs_loaded = load_data(events_base, &events_len, FILE_EVENTS) == 1;
     #ifdef TARGET_ZXSPEC48
-        unsigned int map_len;
-        map_loaded = load_data(MAP_BASE, &map_len, "mapzx.bin") == 1;
-        evs_loaded = load_data(events_base, &events_len, "evlist.bin") == 1;
-        if (! evs_loaded){
-            curpos(0,0);
-            text("Error loading events.");
-            curpos(0,1);
-            text("Please retry from menu.");
-            curpos(0,5);
-            text("press a key to continue");
-            get_key_press();
-        }
-        else{
-            parse_ev_file_consts();
-            strings_base = events_base + events_len;
-            strings_loaded = load_data(strings_base, &strings_len, "strngs.bin") == 1;
-            if (! strings_loaded){
-                curpos(0,2);
-                text("Error loading strings.");
-                curpos(0,3);
-                text("Please retry from menu.");
-                curpos(0,5);
-                text("press a key to continue");
-                get_key_press();
-            }
-        }
+        strings_base = events_base + events_len;
     #endif
+    if (evs_loaded){ parse_ev_file_consts(); }
+    strings_loaded = load_data(strings_base, &strings_len, FILE_STRINGS) == 1;
     uifunc lastmode = (uifunc)-1;
     while (1){
         char changed = lastmode != mode;
