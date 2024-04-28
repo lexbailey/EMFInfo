@@ -36,6 +36,11 @@ things that need to be defined per target...
 #define FILE_MAP "mapzx.bin"
 #define FILE_EVENTS "evlist.bin"
 #define FILE_STRINGS "strngs.bin"
+
+// optional, defines a cleanup function to be registered with atexit()
+#define ATEXIT cleanup
+// optional, defines a function to be registered as an interrupt handler
+#define INTERRUPT interrupt
 */
 
 #ifdef TARGET_ZXSPEC48
@@ -100,6 +105,8 @@ things that need to be defined per target...
     #define FILE_MAP "map.png"
     #define FILE_EVENTS "evlist.bin"
     #define FILE_STRINGS "strngs.bin"
+    #define ATEXIT cleanup
+    #define INTERRUPT interrupt
 #endif
 
 // To port this to another system, add extra TARGET option checks here

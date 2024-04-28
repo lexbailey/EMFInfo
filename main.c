@@ -208,10 +208,14 @@ uifunc menu(char changed, char key){
         text("M - Map");
         curpos(1,4);
         text("L - Load modules from " STORAGE_MEDIUM);
-        curpos(1,6);
+        curpos(1,5);
         text("B - Bug report");
-        curpos(1,7);
+        curpos(1,6);
         text("C - Credits");
+        #ifdef MAIN_CAN_RETURN
+            curpos(1,20);
+            text("Q - Exit");
+        #endif
     }
     if (key == 't'){
         return (uifunc)timetable;
@@ -230,7 +234,6 @@ uifunc menu(char changed, char key){
     }
     #ifdef MAIN_CAN_RETURN
     if (key == 'q'){
-        printf("exit now\n");
         return (uifunc)terminate;
     }
     #endif
@@ -764,10 +767,10 @@ uifunc modules(char changed, char key){
         curpos(24,6);
         if (strings_loaded){text("Yes");}else{text("No");}
 
-        curpos(1,19);
+        curpos(1,18);
         text("Type an ID to load a module");
 
-        curpos(1,21);
+        curpos(1,20);
         text("Q - Main menu");
     }
     if (key == 'q'){
@@ -780,8 +783,10 @@ uifunc modules(char changed, char key){
 int main(){
     init_text();
     clear();
-    #ifdef TARGET_PC_LINUX
-        atexit(cleanup);
+    #ifdef ATEXIT
+        atexit(ATEXIT);
+    #endif
+    #ifdef INTERRUPT
         signal(SIGINT, interrupt);
     #endif
 
