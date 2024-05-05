@@ -32,6 +32,12 @@ things that need to be defined per target...
 
 #define LOADMODE LM_MALLOC // must be equal to LM_MALLOC or LM_STATIC. malloc will allocate space with malloc before loading a file. static assumes there enough space statically allocated
 
+// required if LOADMODE is LM_STATIC
+#define EVENTS_BASE
+#define STRINGS_BASE
+#define MAP_BASE
+// TODO document the other map bases
+
 // names of the various module files
 #define FILE_MAP "mapzx.bin"
 #define FILE_EVENTS "evlist.bin"
@@ -41,6 +47,7 @@ things that need to be defined per target...
 #define ATEXIT cleanup
 // optional, defines a function to be registered as an interrupt handler
 #define INTERRUPT interrupt
+
 */
 
 #ifdef TARGET_ZXSPEC48
@@ -65,6 +72,8 @@ things that need to be defined per target...
     #pragma disable_warning 84
     #pragma disable_warning 85
     #include "mapdata.h"
+    #define EVENTS_BASE ((char*)(0xa000))
+    #define STRINGS_BASE (events_base + events_len)
     #define USES_ZX0
     extern void dzx0_standard(unsigned char *src, unsigned char *dst);
     #define COPYRIGHT "\x7f"

@@ -89,7 +89,9 @@ Other platforms may use other types in place of size_t.
     
     int load_data(void *p, unsigned int *len, char *name){
         noscroll();
-        text("\r");
+        text("\rLoading file: ");
+        text(name);
+        text(".\rPlay tape (BREAK to cancel)\r");
         while (1){
             int ret = load_header(p);
             if (ret == 2){

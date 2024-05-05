@@ -185,10 +185,10 @@ void truncated_text(char max, char* s){
 }
 
 void noscroll(){
-    if (get_cur_y() > 21) {
-        clear();
-        curpos(0,0);
-    } 
+    // Makes sure that the program will not pause if text is written past the end of the screen.
+    #ifdef TARGET_ZXSPEC48
+        *((char *)(0x5C8C)) = 255;
+    #endif
 }
 
 char get_key_press(){

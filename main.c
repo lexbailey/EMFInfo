@@ -75,6 +75,54 @@ unsigned int filt_event_count = 0;
 #include "image_render.c"
 #include "file_io.c"
 
+#if LOADMODE != LM_MALLOC
+    #if LOADMODE != LM_STATIC
+        #error No valid LOADMODE defined
+    #endif
+#endif
+
+#ifndef CUSTOM_LOAD_MAP
+    void load_map(){
+        #if LOADMODE == LM_MALLOC
+            map_len = flen(FILE_MAP);
+            map_base = malloc(sizeof(char) * map_len);
+        #else
+            #if LOADMODE == LM_STATIC
+                map_base = MAP_BASE;
+            #endif
+        #endif
+        map_loaded = load_data(map_base, &map_len, FILE_MAP) == 1;
+    }
+#endif
+
+#ifndef CUSTOM_LOAD_EVLIST
+    void load_evlist(){
+        #if LOADMODE == LM_MALLOC
+            events_len = flen(FILE_EVENTS);
+            events_base = malloc(sizeof(char) * events_len);
+        #else
+            #if LOADMODE == LM_STATIC
+                events_base = EVENTS_BASE;
+            #endif
+        #endif
+        evs_loaded = load_data(events_base, &events_len, FILE_EVENTS) == 1;
+    }
+#endif
+
+#ifndef CUSTOM_LOAD_STRING
+    void load_strings(){
+        #if LOADMODE == LM_MALLOC
+            strings_len = flen(FILE_STRINGS);
+            strings_base = malloc(sizeof(char) * strings_len);
+        #else
+            #if LOADMODE == LM_STATIC
+                strings_base = STRINGS_BASE;
+            #endif
+        #endif
+        strings_loaded = load_data(strings_base, &strings_len, FILE_STRINGS) == 1;
+    }
+#endif
+
 event_t get_event(unsigned int index){
     char big_str_bit_len = events_base[2]; // todo, pack this elsewhere
     char *p = events_base + 5 + mul(index, ev_size);
@@ -773,12 +821,14 @@ uifunc modules(char changed, char key){
         curpos(1,20);
         text("Q - Main menu");
     }
+    if (key == 'm'){load_map(); return modules(1,'\0');}
+    if (key == 'e'){load_evlist(); return modules(1,'\0');}
+    if (key == 's'){load_strings(); return modules(1,'\0');}
     if (key == 'q'){
         return (uifunc)menu;
     }
     return (uifunc)modules;
 }
-
 
 int main(){
     init_text();
@@ -789,26 +839,12 @@ int main(){
     #ifdef INTERRUPT
         signal(SIGINT, interrupt);
     #endif
-
-    #if LOADMODE == LM_MALLOC
-        map_len = flen(FILE_MAP);
-        events_len = flen(FILE_EVENTS);
-        strings_len = flen(FILE_STRINGS);
-        events_base = malloc(sizeof(char) * events_len);
-        strings_base = malloc(sizeof(char) * strings_len);
-    #else
-        #if LOADMODE == LM_STATIC
-        #else
-            #error No valid LOADMODE defined
-        #endif
-    #endif
-    map_loaded = load_data(MAP_BASE, &map_len, FILE_MAP) == 1;
-    evs_loaded = load_data(events_base, &events_len, FILE_EVENTS) == 1;
-    #ifdef TARGET_ZXSPEC48
-        strings_base = events_base + events_len;
-    #endif
+    curpos(0,0);
+    text("Loading data files...");
+    load_map();
+    load_evlist();
     if (evs_loaded){ parse_ev_file_consts(); }
-    strings_loaded = load_data(strings_base, &strings_len, FILE_STRINGS) == 1;
+    load_strings();
     uifunc lastmode = (uifunc)-1;
     while (1){
         char changed = lastmode != mode;
