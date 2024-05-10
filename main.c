@@ -703,7 +703,10 @@ uifunc timetable_list(char changed, char key){
                 index++;
                 offset--;
             }
-            //ev_id = ((page-1) * 10) + key - '0';
+            // might have ended up on a filtered-out one still
+            while (filt_get(index) < 0){
+                index++;
+            }
             ev_id = index;
             return (uifunc)event_detail;
         }
