@@ -4,12 +4,19 @@ from datetime import datetime
 import json
 import os
 import sys
+from unidecode import unidecode
 
 strings = [
     (0, b'\0')
 ]
 
+descs = []
+
 descr_str = {
+    0:[]
+}
+descr_lens = {
+    0:0
 }
 
 time_bits = 13
@@ -74,19 +81,22 @@ earliest = None
 def parsedate(d):
     return datetime.strptime(d, '%Y-%m-%d %H:%M:%S')
 
-def prep_event(title, venue, name, pronouns, cost):
-    title = addstr(title, strings)
-    venue = addstr(venue, strings)
-    name = addstr(name, strings)
-    pronouns = addstr(pronouns, strings)
-    cost = addstr(cost, strings)
+def prep_event(title, venue, name, pronouns, cost, description):
+    global descs
+    addstr(title, strings)
+    addstr(venue, strings)
+    addstr(name, strings)
+    addstr(pronouns, strings)
+    addstr(cost, strings)
+    descs.append(description)
 
-def make_event(f, title, venue, name, pronouns, cost, time, duration, type_, can_record):
+def make_event(f, title, venue, name, pronouns, cost, time, duration, type_, can_record, descpage, desc):
     title = getstr(title, strings)
     venue = getstr(venue, strings)
     name = getstr(name, strings)
     pronouns = getstr(pronouns, strings)
     cost = getstr(cost, strings)
+    desc = getstr(desc, descr_str[descpage])
     can_record_i = 0
     if can_record:
         can_record_i = 1
@@ -101,11 +111,11 @@ def make_event(f, title, venue, name, pronouns, cost, time, duration, type_, can
     bits.extend(tobits(name, b))
     bits.extend(tobits(pronouns, b))
     bits.extend(tobits(cost, b))
+    bits.extend(tobits(descpage, descr_page_bits))
+    bits.extend(tobits(desc, descr_bits))
     bytes_ = compact(bits)
     l += len(bytes_)
     f.write(bytes_)
-    l += 2
-    f.write(bytes([0,0])) # a bit of padding for the description pointer, currently ignored
 
 def type_id(s):
     return {
@@ -115,13 +125,90 @@ def type_id(s):
         'youth workshop': 3,
     }.get(s.lower(), 0)
 
+def ltree_seq():
+    block = 0
+    while True:
+        prefix = ([1] * block) + [0]
+        yield prefix + [0, 0]
+        yield prefix + [0, 1]
+        yield prefix + [1, 0, 0]
+        yield prefix + [1, 0, 1]
+        yield prefix + [1, 1, 0]
+        yield prefix + [1, 1, 1]
+        block += 1
+
+def analyse_strings(ss):
+    chars = {'\0':0}
+    for s in ss:
+        chars['\0'] += 1
+        for c in s:
+            if c not in chars:
+                chars[c] = 0
+            chars[c] += 1
+    print(json.dumps(chars, indent=2))
+    ordered_chars = [a[0] for a in sorted([(k,v) for k,v in chars.items()], key=lambda a: -a[1])]
+    for c in ordered_chars:
+        print(repr(c),',',end='')
+    n_chars = len(ordered_chars)
+    lut = {c: enc for c, enc in zip(ordered_chars, ltree_seq())}
+    return lut
+
+def compress(s, lut):
+    out = []
+    for c in s:
+        out.extend(lut.get(c))
+    out.extend(lut.get('\0'))
+    return compact(out)
+
 with open("evlist.bin", 'wb+') as f:
-    for ev in j:
-        i = lambda n: str(ev.get(n,'')).encode()
-        prep_event(i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'))
+
+    sorted_evs = sorted(j, key=lambda e: parsedate(e.get('start_date')))
+    all_strings = []
+    exceptions = '£'
+    ignored = '\r'
+    for ev in sorted_evs:
+        for s in ['title', 'venue', 'speaker', 'pronouns', 'cost', 'description']:
+            x = ev.get(s, '')
+            if x is None:
+                x = ''
+            x2 = ''.join([
+                unidecode(c) if c not in exceptions else c
+                for c in x if c not in ignored
+            ])
+            ev[s] = x2
+            all_strings.append(x2)
+    lut = analyse_strings(all_strings)
+
+    dlens = []
+    for ev in sorted_evs:
+        dlens.append(len(ev.get('description','')))
+        i = lambda n: compress(ev.get(n), lut)
+        prep_event(i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'), i('description'))
         st = parsedate(ev.get('start_date'))
         if earliest is None or st < earliest:
             earliest = st
+    dlens = sorted(dlens)
+    print(dlens)
+
+    total_desc_len = sum(len(s) for s in descs)
+    descr_bits = 14
+    max_part_size = 2**14
+    n_parts = math.ceil(total_desc_len / max_part_size)
+
+    part_starts = {0:0}
+    p = 0
+    for i, s in enumerate(descs):
+        l = len(s)
+        if (descr_lens[p] + l) > max_part_size: 
+            p += 1
+            part_starts[p] = i
+            descr_str[p] = []
+            descr_lens[p] = 0
+        descr_lens[p] += l
+        addstr(s, descr_str[p])
+
+    print(part_starts)
+    print(descr_lens)
 
     # rewind to the start of the day of the earliest event
     earliest = earliest.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -132,12 +219,12 @@ with open("evlist.bin", 'wb+') as f:
     f.write(bytes([num_evs & 0xff, (num_evs >> 8) & 0xff]))
     bps = str_id_bits(strings)
     f.write(bytes([bps]))
-    ev_size = int(math.ceil(float(((3*8) + (bps * 5))) / 8.0))+2#TODO +2 is fudge for description currently missing
-    f.write(bytes([ev_size]))
-    f.write(bytes([day0]))
+    descr_page_bits = int(math.ceil( math.log2(len(descr_str)) ))
+    ev_size = int(math.ceil(float(((3*8) + (bps * 5) + 14 + descr_page_bits)) / 8.0))
+    f.write(bytes([ev_size, day0, len(descr_str)]))
     maxtime = (2**time_bits)-1
-    for ev in sorted(j, key=lambda e: parsedate(e.get('start_date'))):
-        i = lambda n: str(ev.get(n,'')).encode()
+    for ind, ev in enumerate(sorted_evs):
+        i = lambda n: compress(ev.get(n), lut)
         type_ = type_id(ev.get('type'))
         can_record = ev.get('may_record', False)
         st = parsedate(ev.get('start_date'))
@@ -148,7 +235,12 @@ with open("evlist.bin", 'wb+') as f:
         duration = int((et-st).total_seconds()) // 60
         if (duration > 255):
             duration = 0
-        make_event(f, i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'), time, duration, type_, can_record)
+
+        # get description stuff
+        descpage = 0
+        while (descpage+1) < len(part_starts) and part_starts[descpage+1] <= ind:
+            descpage += 1
+        make_event(f, i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'), time, duration, type_, can_record, descpage, i('description'))
 
 evlen = os.path.getsize("evlist.bin")
 
@@ -157,6 +249,11 @@ strstart = 0x9000+evlen
 with open("strngs.bin", 'wb+') as f:
     for (p,s) in strings:
         f.write(s)
+
+for i, ss in descr_str.items():
+    with open(f"desc{i}.bin", "wb+") as f:
+        for (p,s) in ss:
+            f.write(s)
 
 if len(sys.argv) > 1:
     print(sys.argv[1])

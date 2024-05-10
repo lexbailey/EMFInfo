@@ -8,6 +8,10 @@
 #define EVTYPE_WORKSHOP (2)
 #define EVTYPE_YOUTHWORKSHOP (3)
 
+#define EV_HEADER_LEN (6)
+#define DESCR_BITS (14)
+#define DECOMP_STR_MAX (500)
+
 typedef void (*(*uifunc)(char, char))(); //close enough. I technically can't actually write the type I want, but I can aggressively cast to this approximation
 
 uifunc menu(char, char);
@@ -45,6 +49,8 @@ unsigned char filt_day = 0xff;
 unsigned char filt_type = 0xff;
 char *filt_text = 0;
 
+unsigned char n_desc_modules = 0;
+
 int map_loaded = 0;
 int evs_loaded = 0;
 int strings_loaded = 0;
@@ -59,6 +65,7 @@ typedef struct {
     char *name;
     char *pronouns;
     char *cost;
+    unsigned char descr_page;
     char *descr;
 } event_t;
 
@@ -68,6 +75,7 @@ unsigned int ev_size = 0;
 char str_bit_len = 0;
 char day0_index = 0; //what day of the week (monday=0) is the one that the epoch starts on?
 unsigned int filt_event_count = 0;
+unsigned char descr_page_bits;
 
 #include "intmath.c"
 #include "bitstream_parse.c"
@@ -123,9 +131,54 @@ unsigned int filt_event_count = 0;
     }
 #endif
 
+char last_string[DECOMP_STR_MAX];
+
+char c_lut[255] = {
+' ' ,'e' ,'t' ,'o' ,'a' ,'i' ,'n' ,'r' ,'s' ,'h' ,'l' ,'d' ,'c' ,'u' ,'m' ,'g' ,'p' ,'w' ,'y' ,'f' ,'b' ,'\x00' ,'k' ,'v' ,',' ,'.' ,'\n' ,'-' ,'S' ,'A' ,'T' ,'I' ,'\'' ,'B' ,'/' ,'M' ,'C' ,'1' ,'x' ,'W' ,'D' ,'E' ,'P' ,'H' ,'L' ,')' ,'2' ,'(' ,'F' ,'0' ,'R' ,':' ,'N' ,'j' ,'G' ,'3' ,'O' ,'q' ,'"' ,'5' ,'!' ,'z' ,'J' ,'U' ,'6' ,'?' ,'Y' ,'V' ,'K' ,'9' ,'4' ,'?' ,'*' ,'+' ,'&' ,'8' ,';' ,'7' ,'X' ,'[' ,']' ,'Z' ,'Q' ,'_' ,'@' ,'=' ,'%' ,'#' ,'~' ,'|' ,'>' ,'$'
+};
+
+void decompress(char *s){
+    char *d = last_string;
+    int i = 0;
+    unsigned char c = 0;
+    BITSTREAM_INIT(s)
+    while (i < DECOMP_STR_MAX-2){
+        unsigned char index = 0;
+        while (CBITS(1)){
+            index += 1;
+        }
+        index = (index << 1) + (index << 2);
+        unsigned char x = CBITS(1);
+        if (x){
+            index += 2;
+            index += CBITS(2);
+        }
+        else{
+            index += CBITS(1);
+        }
+        c = c_lut[index];
+        if (c == '\0'){
+            break;
+        }
+        *d++ = c;
+        i ++;
+    }
+    *d = '\0';
+}
+
+void dc_text(char *s){
+    decompress(s);
+    text(last_string);
+}
+
+void dc_truncated_text(unsigned char limit, char *s){
+    decompress(s);
+    truncated_text(limit, last_string);
+}
+
 event_t get_event(unsigned int index){
     char big_str_bit_len = events_base[2]; // todo, pack this elsewhere
-    char *p = events_base + 5 + mul(index, ev_size);
+    char *p = events_base + EV_HEADER_LEN + mul(index, ev_size);
     BITSTREAM_INIT(p)
     event_t ev;
     ev.type = CBITS(2);
@@ -138,7 +191,8 @@ event_t get_event(unsigned int index){
     ev.name = PBITS(str_bit_len);
     ev.pronouns = PBITS(str_bit_len);
     ev.cost = PBITS(str_bit_len);
-    ev.descr = strings_base + IBITS(big_str_bit_len); // TODO this is wrong
+    ev.descr_page = CBITS(descr_page_bits); // TODO this is wrong
+    ev.descr = IBITS(DESCR_BITS); // TODO this is wrong
     char **s = &ev.title;
     for (unsigned char x = 5; x>0;x--){
         *s += (BITSTREAM_OUT_TYPE)strings_base;
@@ -150,14 +204,14 @@ event_t get_event(unsigned int index){
 // similar to the above, but specifically for the time field, because we need to be able to
 // quickly filter based on that
 unsigned int get_event_time(unsigned int index){
-    char *p = events_base + 5 + mul(index, ev_size);
+    char *p = events_base + EV_HEADER_LEN + mul(index, ev_size);
     BITSTREAM_INIT(p)
     CBITS(3);
     return IBITS(13);
 }
 
 unsigned char get_event_type(unsigned int index){
-    char *p = events_base + 5 + mul(index, ev_size);
+    char *p = events_base + EV_HEADER_LEN + mul(index, ev_size);
     BITSTREAM_INIT(p)
     return CBITS(2);
 }
@@ -176,6 +230,13 @@ void parse_ev_file_consts(){
     str_bit_len = events_base[2];
     ev_size = (unsigned int)events_base[3];
     day0_index = events_base[4];
+    n_desc_modules = events_base[5];
+    descr_page_bits = 0;
+    unsigned char nmod = n_desc_modules;
+    while (nmod){
+        nmod >>=1;
+        descr_page_bits += 1;
+    }
 
     for (char x = 0; x <7; x++){
         events_per_day[x] = 0;
@@ -336,19 +397,19 @@ uifunc event_detail(char changed, char key){
         curpos(0,0);
         text(evstr[ev.type]);
         text(":");
-        truncated_text((32*3)-strlen(evstr[ev.type]),ev.title);
+        dc_truncated_text((32*3)-strlen(evstr[ev.type]),ev.title);
 
         curpos(0,3);
         text("By ");
-        truncated_text(29,ev.name);
+        dc_truncated_text(29,ev.name);
         curpos(0,4);
         text("(");
-        truncated_text(30,ev.pronouns);
+        dc_truncated_text(30,ev.pronouns);
         text(")");
 
         curpos(0,5);
         text("At ");
-        truncated_text(29, ev.venue);
+        dc_truncated_text(29, ev.venue);
 
         curpos(0,6);
         text("From ");
@@ -367,7 +428,7 @@ uifunc event_detail(char changed, char key){
         if (ev.type != EVTYPE_TALK){
             curpos(14,7);
             text("Cost: ");
-            truncated_text(12,ev.cost);
+            dc_truncated_text(12,ev.cost);
         }
 
     }
@@ -576,9 +637,9 @@ uifunc timetable_list(char changed, char key){
             curpos(0,line);
             num_text(i);
             text(":");
-            truncated_text(30,ev.title);
+            dc_truncated_text(30,ev.title);
             curpos(2,line+1);
-            truncated_text(30,ev.name);
+            dc_truncated_text(30,ev.name);
             i++;
             index++;
             max_offset ++;
@@ -797,14 +858,22 @@ uifunc modules(char changed, char key){
         text("ID | Name             | Loaded?");
         curpos(0,3);
         text("-------------------------------");
-        curpos(0,4);
-        text(" M | Map data         |");
-        curpos(0,5);
-        text(" E | Event list       |");
-        curpos(0,6);
-        text(" S | Event text       |");
-        curpos(0,7);
-        text(" 1 | Descriptions 1   |");
+        curpos(1,4);
+        text("M | Map data         |");
+        curpos(1,5);
+        text("E | Event list       |");
+        curpos(1,6);
+        text("S | Event text       |");
+        for (int i = 0; i < n_desc_modules; i++){
+            int line = 7+i;
+            curpos(1,line);
+            num_text(i);
+            curpos(3,line);
+            text("| Descriptions ");
+            num_text(i);
+            curpos(22,line);
+            text("|");
+        }
         curpos(0,8);
         text("-------------------------------");
 
