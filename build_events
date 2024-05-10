@@ -5,6 +5,14 @@ import json
 import os
 import sys
 from unidecode import unidecode
+import argparse
+
+p = argparse.ArgumentParser()
+p.add_argument("target", choices=['PC_LINUX', 'ZXSPEC48'])
+args = p.parse_args()
+
+target = args.target
+
 
 strings = [
     (0, b'\0')
@@ -145,10 +153,7 @@ def analyse_strings(ss):
             if c not in chars:
                 chars[c] = 0
             chars[c] += 1
-    print(json.dumps(chars, indent=2))
     ordered_chars = [a[0] for a in sorted([(k,v) for k,v in chars.items()], key=lambda a: -a[1])]
-    for c in ordered_chars:
-        print(repr(c),',',end='')
     n_chars = len(ordered_chars)
     lut = {c: enc for c, enc in zip(ordered_chars, ltree_seq())}
     return lut
@@ -188,7 +193,6 @@ with open("evlist.bin", 'wb+') as f:
         if earliest is None or st < earliest:
             earliest = st
     dlens = sorted(dlens)
-    print(dlens)
 
     total_desc_len = sum(len(s) for s in descs)
     descr_bits = 14
@@ -206,9 +210,6 @@ with open("evlist.bin", 'wb+') as f:
             descr_lens[p] = 0
         descr_lens[p] += l
         addstr(s, descr_str[p])
-
-    print(part_starts)
-    print(descr_lens)
 
     # rewind to the start of the day of the earliest event
     earliest = earliest.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -244,19 +245,26 @@ with open("evlist.bin", 'wb+') as f:
 
 evlen = os.path.getsize("evlist.bin")
 
-strstart = 0x9000+evlen
-
 with open("strngs.bin", 'wb+') as f:
     for (p,s) in strings:
         f.write(s)
+
+pound_placeholder = 0xa3 #TODO this should depend on the target that this file is being built for
+if target == 'ZXSPEC48':
+    pound_placeholder = 0x60
+
+lutname = 'c_lut_default.bin'
+if target == 'ZXSPEC48':
+    lutname = 'c_lut.bin'
+
+with open(lutname, 'wb+') as f:
+    for c in lut:
+        if c == '£':
+            f.write(bytes([pound_placeholder]))
+        else:
+            f.write(bytes([ord(c)]))
 
 for i, ss in descr_str.items():
     with open(f"desc{i}.bin", "wb+") as f:
         for (p,s) in ss:
             f.write(s)
-
-if len(sys.argv) > 1:
-    print(sys.argv[1])
-    for (i,s) in strings:
-        if s.startswith(sys.argv[1].encode()):
-            print(f"{s} starts at {hex(strstart)} + {hex(i)} = {hex(i+strstart)}")

@@ -53,6 +53,7 @@ unsigned char n_desc_modules = 0;
 
 int map_loaded = 0;
 int evs_loaded = 0;
+int c_lut_loaded = 0;
 int strings_loaded = 0;
 
 typedef struct {
@@ -117,6 +118,22 @@ unsigned char descr_page_bits;
     }
 #endif
 
+
+#ifndef CUSTOM_LOAD_C_LUT
+    void load_c_lut(){
+        #if LOADMODE == LM_MALLOC
+            c_lut_len = flen(FILE_C_LUT);
+            c_lut_base = malloc(sizeof(char) * c_lut_len);
+        #else
+            #if LOADMODE == LM_STATIC
+                c_lut_base = C_LUT_BASE;
+            #endif
+        #endif
+        c_lut_loaded = load_data(c_lut_base, &c_lut_len, FILE_C_LUT) == 1;
+    }
+#endif
+
+
 #ifndef CUSTOM_LOAD_STRING
     void load_strings(){
         #if LOADMODE == LM_MALLOC
@@ -132,10 +149,6 @@ unsigned char descr_page_bits;
 #endif
 
 char last_string[DECOMP_STR_MAX];
-
-char c_lut[255] = {
-' ' ,'e' ,'t' ,'o' ,'a' ,'i' ,'n' ,'r' ,'s' ,'h' ,'l' ,'d' ,'c' ,'u' ,'m' ,'g' ,'p' ,'w' ,'y' ,'f' ,'b' ,'\x00' ,'k' ,'v' ,',' ,'.' ,'\n' ,'-' ,'S' ,'A' ,'T' ,'I' ,'\'' ,'B' ,'/' ,'M' ,'C' ,'1' ,'x' ,'W' ,'D' ,'E' ,'P' ,'H' ,'L' ,')' ,'2' ,'(' ,'F' ,'0' ,'R' ,':' ,'N' ,'j' ,'G' ,'3' ,'O' ,'q' ,'"' ,'5' ,'!' ,'z' ,'J' ,'U' ,'6' ,'?' ,'Y' ,'V' ,'K' ,'9' ,'4' ,'?' ,'*' ,'+' ,'&' ,'8' ,';' ,'7' ,'X' ,'[' ,']' ,'Z' ,'Q' ,'_' ,'@' ,'=' ,'%' ,'#' ,'~' ,'|' ,'>' ,'$'
-};
 
 void decompress(char *s){
     char *d = last_string;
@@ -156,11 +169,21 @@ void decompress(char *s){
         else{
             index += CBITS(1);
         }
-        c = c_lut[index];
+        c = c_lut_base[index];
         if (c == '\0'){
             break;
         }
-        *d++ = c;
+        // pound sign is special
+        if (c == GBP_CHAR){
+          unsigned char y = (unsigned char)strlen(GBP);
+          for (unsigned char j = 0; j < y; j++){
+              *d++ = GBP[j];
+              i++;
+          }
+        }
+        else{
+          *d++ = c;
+        }
         i ++;
     }
     *d = '\0';
@@ -724,7 +747,7 @@ uifunc daily_timetable(char changed, char key){
 uifunc timetable(char changed, char key){
     if (changed){
         clear();
-        if (!evs_loaded){
+        if (!evs_loaded || !c_lut_loaded){
             curpos(0,0);
             text("Error: Timetable is not loaded");
             curpos(0,1);
@@ -863,9 +886,11 @@ uifunc modules(char changed, char key){
         curpos(1,5);
         text("E | Event list       |");
         curpos(1,6);
+        text("C | Character table  |");
+        curpos(1,7);
         text("S | Event text       |");
         for (int i = 0; i < n_desc_modules; i++){
-            int line = 7+i;
+            int line = 8+i;
             curpos(1,line);
             num_text(i);
             curpos(3,line);
@@ -874,7 +899,7 @@ uifunc modules(char changed, char key){
             curpos(22,line);
             text("|");
         }
-        curpos(0,8);
+        curpos(0,8+n_desc_modules);
         text("-------------------------------");
 
         curpos(24,4);
@@ -882,6 +907,8 @@ uifunc modules(char changed, char key){
         curpos(24,5);
         if (evs_loaded){text("Yes");}else{text("No");}
         curpos(24,6);
+        if (c_lut_loaded){text("Yes");}else{text("No");}
+        curpos(24,7);
         if (strings_loaded){text("Yes");}else{text("No");}
 
         curpos(1,18);
@@ -892,6 +919,7 @@ uifunc modules(char changed, char key){
     }
     if (key == 'm'){load_map(); return modules(1,'\0');}
     if (key == 'e'){load_evlist(); return modules(1,'\0');}
+    if (key == 'c'){load_c_lut(); return modules(1,'\0');}
     if (key == 's'){load_strings(); return modules(1,'\0');}
     if (key == 'q'){
         return (uifunc)menu;
@@ -913,6 +941,7 @@ int main(){
     load_map();
     load_evlist();
     if (evs_loaded){ parse_ev_file_consts(); }
+    load_c_lut();
     load_strings();
     uifunc lastmode = (uifunc)-1;
     while (1){

@@ -74,12 +74,16 @@ things that need to be defined per target...
     #include "mapdata.h"
     #define EVENTS_BASE ((char*)(0xa000))
     #define STRINGS_BASE (events_base + events_len)
+    #define C_LUT_BASE ((char *)(0x7f00))
     #define USES_ZX0
     extern void dzx0_standard(unsigned char *src, unsigned char *dst);
     #define COPYRIGHT "\x7f"
+    #define GBP_CHAR '\x60'
+    #define GBP "\x60"
     #define LOADMODE LM_STATIC
     #define FILE_MAP "mapzx.bin"
     #define FILE_EVENTS "evlist.bin"
+    #define FILE_C_LUT "c_lut.bin"
     #define FILE_STRINGS "strngs.bin"
 #endif
 
@@ -110,9 +114,15 @@ things that need to be defined per target...
     #define MAP_SOUTH_BASE (map_south)
     #define MAIN_CAN_RETURN
     #define COPYRIGHT "\xc2\xa9"
+    // This is the ISO-8859-1 encoding of the pound symbol
+    // it's not actually printed, only used as a placeholder value for identfying the pound in the custom encoding, so it's fine that this is not utf-8
+    #define GBP_CHAR (0xa3)
+    // This _is_ utf-8 tho
+    #define GBP "\xc2\xa3"
     #define LOADMODE LM_MALLOC
     #define FILE_MAP "map.png"
     #define FILE_EVENTS "evlist.bin"
+    #define FILE_C_LUT "c_lut_default.bin"
     #define FILE_STRINGS "strngs.bin"
     #define ATEXIT cleanup
     #define INTERRUPT interrupt

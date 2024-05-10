@@ -21,11 +21,18 @@ $(ZX0): ZX0/src/zx0.c
 schedule.json:
 	curl -Lo $@ https://www.emfcamp.org/schedule/2022.json
 
-evlist.bin strngs.bin: evbuild_intermediate ;
+# TODO fix the mess around building the events files
+evlist.bin strngs.bin c_lut_default.bin: evbuild_intermediate_pc_linux ;
+c_lut.bin: evbuild_intermediate_zxspec48 ;
 
-.INTERMEDIATE: evbuild_intermediate
-evbuild_intermediate: build_events schedule.json
-	./build_events
+.INTERMEDIATE: evbuild_intermediate_pc_linux
+.INTERMEDIATE: evbuild_intermediate_zxspec48
+
+evbuild_intermediate_zxspec48: build_events schedule.json
+	./build_events ZXSPEC48
+
+evbuild_intermediate_pc_linux: build_events schedule.json
+	./build_events PC_LINUX
 
 main.zxspec48.bin: crt0.s dzx0.s mapdata.h $(main_sources)
 	sdasz80 -l -o -s -g -j -y -a crt0.s 
@@ -58,7 +65,7 @@ mapzx.bin: map/map_full.scr.zx0 map/map_north.scr.zx0 map/map_south.scr.zx0
 mapdata.h: mapzx.bin gen_map_header
 	./gen_map_header
 
-emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap mapzx.bin.tap evlist.bin.tap strngs.bin.tap
+emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap mapzx.bin.tap evlist.bin.tap c_lut.bin.tap strngs.bin.tap
 	cat $^ > $@
 
 %.wav: %.tap
