@@ -48,6 +48,16 @@ things that need to be defined per target...
 // optional, defines a function to be registered as an interrupt handler
 #define INTERRUPT interrupt
 
+
+// The value that the "£" (pound) symbol will have once decoded with the c_lut (character lookup table) file.
+#define GBP_CHAR '\x60'
+// The string to use in place of GBP_CHAR (could just be the same char again)
+#define GBP "\x60"
+
+// Define this if GBP is equal to GBP_CHAR (there's no good way to automate this in the preprocessor)
+// This removes some code from the decoder path, making it a little faster
+#define GBP_CHAR_NOTRANSFORM
+
 */
 
 #ifdef TARGET_ZXSPEC48
@@ -80,6 +90,7 @@ things that need to be defined per target...
     #define COPYRIGHT "\x7f"
     #define GBP_CHAR '\x60'
     #define GBP "\x60"
+    #define GBP_CHAR_NOTRANSFORM
     #define LOADMODE LM_STATIC
     #define FILE_MAP "mapzx.bin"
     #define FILE_EVENTS "evlist.bin"

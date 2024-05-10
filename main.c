@@ -174,16 +174,20 @@ void decompress(char *s){
             break;
         }
         // pound sign is special
-        if (c == GBP_CHAR){
-          unsigned char y = (unsigned char)strlen(GBP);
-          for (unsigned char j = 0; j < y; j++){
-              *d++ = GBP[j];
-              i++;
-          }
-        }
-        else{
-          *d++ = c;
-        }
+        #ifndef GBP_CHAR_NOTRANSFORM
+            if (c == GBP_CHAR){
+              unsigned char y = (unsigned char)strlen(GBP);
+              for (unsigned char j = 0; j < y; j++){
+                  *d++ = GBP[j];
+                  i++;
+              }
+            }
+            else{
+              *d++ = c;
+            }
+        #else
+            *d++ = c;
+        #endif
         i ++;
     }
     *d = '\0';
@@ -479,6 +483,11 @@ char is_substr(char *str, char *tofind){
     return 0;
 }
 
+char dc_is_substr(char *str, char *tofind){
+    decompress(str);
+    return is_substr(last_string, tofind);
+}
+
 void apply_filters(){
     // This function scans all the events and marks or un-marks each one according to filters
     // it also generates a lookup table to find the first event on any given page.
@@ -529,8 +538,8 @@ void apply_filters(){
                 event_t ev;
                 ev = get_event(i);
                 // Search finds the exact string in the title or speaker fields
-                if (!is_substr(ev.title, filt_text)){
-                    if (!is_substr(ev.name, filt_text)){
+                if (!dc_is_substr(ev.title, filt_text)){
+                    if (!dc_is_substr(ev.name, filt_text)){
                         is_in = 0;
                     }
                 }
