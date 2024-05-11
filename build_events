@@ -196,7 +196,7 @@ with open("evlist.bin", 'wb+') as f:
 
     total_desc_len = sum(len(s) for s in descs)
     descr_bits = 14
-    max_part_size = 2**14
+    max_part_size = 12000
     n_parts = math.ceil(total_desc_len / max_part_size)
 
     part_starts = {0:0}
@@ -221,7 +221,9 @@ with open("evlist.bin", 'wb+') as f:
     bps = str_id_bits(strings)
     f.write(bytes([bps]))
     descr_page_bits = int(math.ceil( math.log2(len(descr_str)) ))
-    ev_size = int(math.ceil(float(((3*8) + (bps * 5) + 14 + descr_page_bits)) / 8.0))
+    #2+1+13+8+1+(14 * 5) + 4 + 14
+    ev_size = int(math.ceil(float(((3*8) +1 + (bps * 5) + descr_page_bits + descr_bits)) / 8.0))
+    print(ev_size)
     f.write(bytes([ev_size, day0, len(descr_str)]))
     maxtime = (2**time_bits)-1
     for ind, ev in enumerate(sorted_evs):

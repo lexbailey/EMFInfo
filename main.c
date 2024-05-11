@@ -51,10 +51,12 @@ char *filt_text = 0;
 
 unsigned char n_desc_modules = 0;
 
-int map_loaded = 0;
-int evs_loaded = 0;
-int c_lut_loaded = 0;
-int strings_loaded = 0;
+unsigned char descs_loaded[9] = {0,0,0,0,0,0,0,0,0};
+
+unsigned char map_loaded = 0;
+unsigned char evs_loaded = 0;
+unsigned char c_lut_loaded = 0;
+unsigned char strings_loaded = 0;
 
 typedef struct {
     unsigned char type;
@@ -148,6 +150,29 @@ unsigned char descr_page_bits;
     }
 #endif
 
+#ifndef CUSTOM_LOAD_DESCS
+    void load_descs(unsigned char n){
+        static char desc_file_name[] = "desc0.bin";
+        desc_file_name[4] = '0' + n;
+        for (unsigned char i = 0; i<=8; i++){
+            descs_loaded[i] = 0;
+        }
+        #if LOADMODE == LM_MALLOC
+            // TODO, on most systems we could actually load all of this at once
+            if (descs_base != NULL){
+                free(descs_base);
+            }
+            descs_len = flen(desc_file_name);
+            descs_base = malloc(sizeof(char) * descs_len);
+        #else
+            #if LOADMODE == LM_STATIC
+                descs_base = DESCS_BASE;
+            #endif
+        #endif
+        descs_loaded[n] = load_data(descs_base, &descs_len, desc_file_name) == 1;
+    }
+#endif
+
 char last_string[DECOMP_STR_MAX];
 
 void decompress(char *s){
@@ -218,14 +243,16 @@ event_t get_event(unsigned int index){
     ev.name = PBITS(str_bit_len);
     ev.pronouns = PBITS(str_bit_len);
     ev.cost = PBITS(str_bit_len);
-    ev.descr_page = CBITS(descr_page_bits); // TODO this is wrong
-    ev.descr = IBITS(DESCR_BITS); // TODO this is wrong
+    ev.descr_page = CBITS(descr_page_bits);
+    ev.descr = PBITS(DESCR_BITS) + (BITSTREAM_OUT_TYPE)descs_base;
     char **s = &ev.title;
     for (unsigned char x = 5; x>0;x--){
         *s += (BITSTREAM_OUT_TYPE)strings_base;
         s++;
     }
     return ev;
+    // 2+1+13+8+1+(str_bit_len * 5) + descr_page_bits + descr_bits
+    // 2+1+13+8+1+(14 * 5) + 4 + 14
 }
 
 // similar to the above, but specifically for the time field, because we need to be able to
@@ -456,6 +483,16 @@ uifunc event_detail(char changed, char key){
             curpos(14,7);
             text("Cost: ");
             dc_truncated_text(12,ev.cost);
+        }
+
+        curpos(0,8);
+        if (descs_loaded[ev.descr_page]){
+            dc_truncated_text(255, ev.descr);
+        }
+        else{
+            text("(description not loaded)\n(load descriptions  )");
+            curpos(19,9);
+            num_text(ev.descr_page);
         }
 
     }
@@ -910,6 +947,9 @@ uifunc modules(char changed, char key){
             num_text(i);
             curpos(22,line);
             text("|");
+
+            curpos(24,line);
+            if (descs_loaded[i]){text("Yes");}else{text("No");}
         }
         curpos(0,8+n_desc_modules);
         text("-------------------------------");
@@ -923,6 +963,7 @@ uifunc modules(char changed, char key){
         curpos(24,7);
         if (strings_loaded){text("Yes");}else{text("No");}
 
+
         curpos(1,18);
         text("Type an ID to load a module");
 
@@ -933,6 +974,7 @@ uifunc modules(char changed, char key){
     if (key == 'e'){load_evlist(); return modules(1,'\0');}
     if (key == 'c'){load_c_lut(); return modules(1,'\0');}
     if (key == 's'){load_strings(); return modules(1,'\0');}
+    if (key >= '0' && key <= '8'){load_descs(key-'0'); return modules(1,'\0');}
     if (key == 'q'){
         return (uifunc)menu;
     }
