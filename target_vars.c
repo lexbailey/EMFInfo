@@ -1,13 +1,14 @@
 #ifdef TARGET_ZXSPEC48
-char *events_base = (char *)0xA000;
+char *events_base = 0;
 char *strings_base = 0;
 char *map_base = 0;
-char *descs_base = (char *)0x;// TODO reshuffle
-char *c_lut_base = (char *)0x7f00;
+char *descs_base = 0;
+char *c_lut_base = 0;
 unsigned int map_len = 0;
 unsigned int events_len = 0;
 unsigned int c_lut_len = 0;
 unsigned int strings_len = 0;
+unsigned int descs_len = 0;
 #endif
 
 #ifdef TARGET_PC_LINUX

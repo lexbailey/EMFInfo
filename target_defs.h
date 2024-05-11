@@ -81,10 +81,12 @@ things that need to be defined per target...
     #define LAST_K (*((char*)(23560)))
     #pragma disable_warning 84
     #pragma disable_warning 85
+    extern void *end_of_program;
     #include "mapdata.h"
-    #define EVENTS_BASE ((char*)(0xa000))
-    #define STRINGS_BASE (events_base + events_len)
-    #define C_LUT_BASE ((char *)(0x7f00))
+    #define EVENTS_BASE (map_base + map_len)
+    #define C_LUT_BASE (events_base + events_len)
+    #define STRINGS_BASE (c_lut_base + c_lut_len)
+    #define DESCS_BASE (strings_base + strings_len)
     #define USES_ZX0
     extern void dzx0_standard(unsigned char *src, unsigned char *dst);
     #define COPYRIGHT "\x7f"
@@ -96,6 +98,9 @@ things that need to be defined per target...
     #define FILE_EVENTS "evlist.bin"
     #define FILE_C_LUT "c_lut.bin"
     #define FILE_STRINGS "strngs.bin"
+    #define FILE_DESCS "desc0.bin"
+    #define FILE_DESCS_ID_CHAR (4)
+    #define NEWLINE "\r"
 #endif
 
 #ifdef TARGET_PC_LINUX
@@ -132,11 +137,14 @@ things that need to be defined per target...
     #define GBP "\xc2\xa3"
     #define LOADMODE LM_MALLOC
     #define FILE_MAP "map.png"
-    #define FILE_EVENTS "evlist.bin"
+    #define FILE_EVENTS "evlist_default.bin"
     #define FILE_C_LUT "c_lut_default.bin"
-    #define FILE_STRINGS "strngs.bin"
+    #define FILE_STRINGS "strings_default.bin"
+    #define FILE_DESCS "descriptions0.bin"
+    #define FILE_DESCS_ID_CHAR (12)
     #define ATEXIT cleanup
     #define INTERRUPT interrupt
+    #define NEWLINE "\n"
 #endif
 
 // To port this to another system, add extra TARGET option checks here

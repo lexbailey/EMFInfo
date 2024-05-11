@@ -13,6 +13,19 @@ args = p.parse_args()
 
 target = args.target
 
+pound_placeholder = 0xa3
+evlist_name = "evlist_default.bin"
+strings_name = "strings_default.bin"
+lutname = 'c_lut_default.bin'
+desc_prefix = 'descriptions'
+max_part_size = 2**24
+if target == 'ZXSPEC48':
+    pound_placeholder = 0x60
+    lutname = 'c_lut.bin'
+    desc_prefix = 'desc'
+    max_part_size = 0x2c7d
+    evlist_name = "evlist.bin"
+    strings_name = "strngs.bin"
 
 strings = [
     (0, b'\0')
@@ -165,8 +178,7 @@ def compress(s, lut):
     out.extend(lut.get('\0'))
     return compact(out)
 
-with open("evlist.bin", 'wb+') as f:
-
+with open(evlist_name, 'wb+') as f:
     sorted_evs = sorted(j, key=lambda e: parsedate(e.get('start_date')))
     all_strings = []
     exceptions = '£'
@@ -196,7 +208,6 @@ with open("evlist.bin", 'wb+') as f:
 
     total_desc_len = sum(len(s) for s in descs)
     descr_bits = 14
-    max_part_size = 12000
     n_parts = math.ceil(total_desc_len / max_part_size)
 
     part_starts = {0:0}
@@ -211,6 +222,8 @@ with open("evlist.bin", 'wb+') as f:
         descr_lens[p] += l
         addstr(s, descr_str[p])
 
+    print(part_starts)
+
     # rewind to the start of the day of the earliest event
     earliest = earliest.replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -223,7 +236,6 @@ with open("evlist.bin", 'wb+') as f:
     descr_page_bits = int(math.ceil( math.log2(len(descr_str)) ))
     #2+1+13+8+1+(14 * 5) + 4 + 14
     ev_size = int(math.ceil(float(((3*8) +1 + (bps * 5) + descr_page_bits + descr_bits)) / 8.0))
-    print(ev_size)
     f.write(bytes([ev_size, day0, len(descr_str)]))
     maxtime = (2**time_bits)-1
     for ind, ev in enumerate(sorted_evs):
@@ -243,21 +255,12 @@ with open("evlist.bin", 'wb+') as f:
         descpage = 0
         while (descpage+1) < len(part_starts) and part_starts[descpage+1] <= ind:
             descpage += 1
+        print(descpage)
         make_event(f, i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'), time, duration, type_, can_record, descpage, i('description'))
 
-evlen = os.path.getsize("evlist.bin")
-
-with open("strngs.bin", 'wb+') as f:
+with open(strings_name, 'wb+') as f:
     for (p,s) in strings:
         f.write(s)
-
-pound_placeholder = 0xa3 #TODO this should depend on the target that this file is being built for
-if target == 'ZXSPEC48':
-    pound_placeholder = 0x60
-
-lutname = 'c_lut_default.bin'
-if target == 'ZXSPEC48':
-    lutname = 'c_lut.bin'
 
 with open(lutname, 'wb+') as f:
     for c in lut:
@@ -267,6 +270,6 @@ with open(lutname, 'wb+') as f:
             f.write(bytes([ord(c)]))
 
 for i, ss in descr_str.items():
-    with open(f"desc{i}.bin", "wb+") as f:
+    with open(f"{desc_prefix}{i}.bin", "wb+") as f:
         for (p,s) in ss:
             f.write(s)

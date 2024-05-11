@@ -2,6 +2,8 @@ SHELL=bash
 
 ZX0=./ZX0/src/zx0
 
+PROG_START=0x5e88
+
 main_sources=main.c bitstream_parse.c file_io.c image_render.c intmath.c mapdata.h target_defs.h target_vars.c text_render.c
 
 default: all
@@ -40,7 +42,7 @@ main.zxspec48.bin: crt0.s dzx0.s mapdata.h $(main_sources)
 	sdcc -c --no-std-crt0 --std-c23 -D TARGET_ZXSPEC48 -mz80 --reserve-regs-iy main.c
 	./gen_zxspec_link_script
 	sdldz80 -f zxspec48.lnk
-	makebin -s 65535 -o 0x8000 -p main.ihx $@
+	makebin -s 65535 -o $(PROG_START) -p main.ihx $@
 
 %.tap: %.bas bas2tap/bas2tap
 	bas2tap/bas2tap -spreload -a1 $< $@
@@ -53,7 +55,7 @@ main.zxspec48.bin: crt0.s dzx0.s mapdata.h $(main_sources)
 	mv $<.tap $@
 
 main.zxspec48.bin.tap: main.zxspec48.bin bin2tap/bin2tap
-	bin2tap/bin2tap 0x8000 "EMFI_BIN" $<
+	bin2tap/bin2tap $(PROG_START) "EMFI_BIN" $<
 
 %.zx0: % $(ZX0)
 	-rm $@
@@ -65,13 +67,21 @@ mapzx.bin: map/map_full.scr.zx0 map/map_north.scr.zx0 map/map_south.scr.zx0
 mapdata.h: mapzx.bin gen_map_header
 	./gen_map_header
 
-emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap mapzx.bin.tap evlist.bin.tap c_lut.bin.tap strngs.bin.tap
+
+descriptions.tap: evbuild_intermediate_zxspec48
+	rm -f descriptions.tap
+	$(MAKE) $(patsubst %.bin,%.bin.tap,$(shell echo desc?.bin))
+	cat desc*.bin.tap > $@
+
+test:
+
+emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap mapzx.bin.tap evlist.bin.tap c_lut.bin.tap strngs.bin.tap descriptions.tap
 	cat $^ > $@
 
 %.wav: %.tap
 	tape2wav $< $@
 
-emfinfo_linux: $(main_sources)
+emfinfo_linux: $(main_sources) evbuild_intermediate_pc_linux
 	cc -gdwarf -DTARGET_PC_LINUX -c main.c -o main.o
 	cc -gdwarf -o $@ main.o
 

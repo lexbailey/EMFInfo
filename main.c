@@ -89,6 +89,8 @@ unsigned char descr_page_bits;
 #if LOADMODE != LM_MALLOC
     #if LOADMODE != LM_STATIC
         #error No valid LOADMODE defined
+    #else
+        #define MODULE_ORDER
     #endif
 #endif
 
@@ -152,13 +154,12 @@ unsigned char descr_page_bits;
 
 #ifndef CUSTOM_LOAD_DESCS
     void load_descs(unsigned char n){
-        static char desc_file_name[] = "desc0.bin";
-        desc_file_name[4] = '0' + n;
+        static char desc_file_name[] = FILE_DESCS;
+        desc_file_name[FILE_DESCS_ID_CHAR] = '0' + n;
         for (unsigned char i = 0; i<=8; i++){
             descs_loaded[i] = 0;
         }
         #if LOADMODE == LM_MALLOC
-            // TODO, on most systems we could actually load all of this at once
             if (descs_base != NULL){
                 free(descs_base);
             }
@@ -490,7 +491,7 @@ uifunc event_detail(char changed, char key){
             dc_truncated_text(255, ev.descr);
         }
         else{
-            text("(description not loaded)\n(load descriptions  )");
+            text("(description not loaded)" NEWLINE "(load descriptions  )");
             curpos(19,9);
             num_text(ev.descr_page);
         }
@@ -920,6 +921,22 @@ uifunc mapsouth(char changed, char key){
     return (uifunc)mapsouth;
 }
 
+void warn_load_first(char c){
+    clear();
+    curpos(0,0);
+    text("Module depends on another.");
+    curpos(0,1);
+    text("Please load module _ first.");
+    char c2[2];
+    c2[0] = c;
+    c2[1] = '\0';
+    curpos(19,1);
+    text(c2);
+    curpos(0,2);
+    text("Press any key.");
+    get_key_press();
+}
+
 uifunc modules(char changed, char key){
     if (changed){
         clear();
@@ -971,10 +988,54 @@ uifunc modules(char changed, char key){
         text("Q - Main menu");
     }
     if (key == 'm'){load_map(); return modules(1,'\0');}
-    if (key == 'e'){load_evlist(); return modules(1,'\0');}
-    if (key == 'c'){load_c_lut(); return modules(1,'\0');}
-    if (key == 's'){load_strings(); return modules(1,'\0');}
-    if (key >= '0' && key <= '8'){load_descs(key-'0'); return modules(1,'\0');}
+    if (key == 'e'){
+        #ifdef MODULE_ORDER
+            if (!map_loaded){
+                warn_load_first('M');
+            }
+            else{
+                load_evlist(); return modules(1,'\0');
+            }
+        #else
+            load_evlist(); return modules(1,'\0');
+        #endif
+    }
+    if (key == 'c'){
+        #ifdef MODULE_ORDER
+            if (!evs_loaded){
+                warn_load_first('E');
+            }
+            else{
+                load_c_lut(); return modules(1,'\0');
+            }
+        #else
+            load_c_lut(); return modules(1,'\0');
+        #endif
+    }
+    if (key == 's'){
+        #ifdef MODULE_ORDER
+            if (!c_lut_loaded){
+                warn_load_first('C');
+            }
+            else {
+                load_strings(); return modules(1,'\0');
+            }
+        #else
+            load_strings(); return modules(1,'\0');
+        #endif
+    }
+    if (key >= '0' && key <= '8'){
+        #ifdef MODULE_ORDER
+            if (!strings_loaded){
+                warn_load_first('S');
+            }
+            else{
+                load_descs(key-'0'); return modules(1,'\0');
+            }
+        #else
+            load_descs(key-'0'); return modules(1,'\0');
+        #endif
+    }
     if (key == 'q'){
         return (uifunc)menu;
     }
