@@ -24,8 +24,8 @@ schedule.json:
 	curl -Lo $@ https://www.emfcamp.org/schedule/2022.json
 
 # TODO fix the mess around building the events files
-evlist.bin strngs.bin c_lut_default.bin: evbuild_intermediate_pc_linux ;
-c_lut.bin: evbuild_intermediate_zxspec48 ;
+evlist_default.bin strings_default.bin c_lut_default.bin: evbuild_intermediate_pc_linux ;
+c_lut.bin evlist.bin strngs.bin: evbuild_intermediate_zxspec48 ;
 
 .INTERMEDIATE: evbuild_intermediate_pc_linux
 .INTERMEDIATE: evbuild_intermediate_zxspec48

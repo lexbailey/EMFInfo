@@ -222,8 +222,6 @@ with open(evlist_name, 'wb+') as f:
         descr_lens[p] += l
         addstr(s, descr_str[p])
 
-    print(part_starts)
-
     # rewind to the start of the day of the earliest event
     earliest = earliest.replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -255,7 +253,6 @@ with open(evlist_name, 'wb+') as f:
         descpage = 0
         while (descpage+1) < len(part_starts) and part_starts[descpage+1] <= ind:
             descpage += 1
-        print(descpage)
         make_event(f, i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'), time, duration, type_, can_record, descpage, i('description'))
 
 with open(strings_name, 'wb+') as f:
