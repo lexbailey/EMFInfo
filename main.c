@@ -7,9 +7,7 @@
 #define EVTYPE_PERFORMANCE (1)
 #define EVTYPE_WORKSHOP (2)
 #define EVTYPE_YOUTHWORKSHOP (3)
-
 #define EV_HEADER_LEN (6)
-#define DESCR_BITS (14)
 #define DECOMP_STR_MAX (500)
 
 typedef void (*(*uifunc)(char, char))(); //close enough. I technically can't actually write the type I want, but I can aggressively cast to this approximation
@@ -287,7 +285,7 @@ void parse_ev_file_consts(){
     day0_index = events_base[4];
     n_desc_modules = events_base[5];
     descr_page_bits = 0;
-    unsigned char nmod = n_desc_modules;
+    unsigned char nmod = n_desc_modules &~1;
     while (nmod){
         nmod >>=1;
         descr_page_bits += 1;
@@ -1058,6 +1056,9 @@ int main(){
     if (evs_loaded){ parse_ev_file_consts(); }
     load_c_lut();
     load_strings();
+    #ifdef AUTOLOAD_DESC0
+        load_descs(0);
+    #endif
     uifunc lastmode = (uifunc)-1;
     while (1){
         char changed = lastmode != mode;

@@ -5,12 +5,12 @@ signed char bitstream_pos;
     #define BITSTREAM_OUT_TYPE unsigned int
 #endif
 #ifdef TARGET_PC_LINUX
-    #define BITSTREAM_OUT_TYPE long int
+    #define BITSTREAM_OUT_TYPE long unsigned int
 #endif
 
 BITSTREAM_OUT_TYPE bitstream_get(char bits){
     char rembits = bits;
-    unsigned int outval = 0;
+    BITSTREAM_OUT_TYPE outval = 0;
     while (rembits) {
         outval = (outval << 1) | ((bitstream_ptr[0] >> bitstream_pos) & 1);
         bitstream_pos -= 1;

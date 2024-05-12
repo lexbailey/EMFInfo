@@ -100,6 +100,7 @@ things that need to be defined per target...
     #define FILE_STRINGS "strngs.bin"
     #define FILE_DESCS "desc0.bin"
     #define FILE_DESCS_ID_CHAR (4)
+    #define DESCR_BITS (14)
     #define NEWLINE "\r"
 #endif
 
@@ -142,9 +143,11 @@ things that need to be defined per target...
     #define FILE_STRINGS "strings_default.bin"
     #define FILE_DESCS "descriptions0.bin"
     #define FILE_DESCS_ID_CHAR (12)
+    #define DESCR_BITS (24)
     #define ATEXIT cleanup
     #define INTERRUPT interrupt
     #define NEWLINE "\n"
+    #define AUTOLOAD_DESC0
 #endif
 
 // To port this to another system, add extra TARGET option checks here

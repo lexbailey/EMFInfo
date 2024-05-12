@@ -19,11 +19,13 @@ strings_name = "strings_default.bin"
 lutname = 'c_lut_default.bin'
 desc_prefix = 'descriptions'
 max_part_size = 2**24
+descr_bits = 24
 if target == 'ZXSPEC48':
     pound_placeholder = 0x60
     lutname = 'c_lut.bin'
     desc_prefix = 'desc'
     max_part_size = 0x2c7d
+    descr_bits = 14
     evlist_name = "evlist.bin"
     strings_name = "strngs.bin"
 
@@ -207,7 +209,6 @@ with open(evlist_name, 'wb+') as f:
     dlens = sorted(dlens)
 
     total_desc_len = sum(len(s) for s in descs)
-    descr_bits = 14
     n_parts = math.ceil(total_desc_len / max_part_size)
 
     part_starts = {0:0}
@@ -264,7 +265,10 @@ with open(lutname, 'wb+') as f:
         if c == '£':
             f.write(bytes([pound_placeholder]))
         else:
-            f.write(bytes([ord(c)]))
+            if c == '\n' and target=='ZXSPEC48':
+                f.write(bytes([ord('\r')]))
+            else:
+                f.write(bytes([ord(c)]))
 
 for i, ss in descr_str.items():
     with open(f"{desc_prefix}{i}.bin", "wb+") as f:
