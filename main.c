@@ -55,7 +55,7 @@ char *filt_text = 0;
 
 unsigned char n_desc_modules = 0;
 
-unsigned char descs_loaded[9] = {0,0,0,0,0,0,0,0,0};
+unsigned char descs_loaded[10] = {0,0,0,0,0,0,0,0,0};
 
 unsigned char map_loaded = 0;
 unsigned char evs_loaded = 0;
@@ -1000,7 +1000,7 @@ uifunc modules(char changed, char key){
         if (strings_loaded){text("Yes");}else{text("No");}
 
 
-        curpos(1,18);
+        curpos(1,19);
         text("Type an ID to load a module");
 
         curpos(1,20);
@@ -1043,7 +1043,7 @@ uifunc modules(char changed, char key){
             load_strings(); return modules(1,'\0');
         #endif
     }
-    if (key >= '0' && key <= '8'){
+    if (key >= '0' && key <= '9'){
         #ifdef MODULE_ORDER
             if (!strings_loaded){
                 warn_load_first('S');

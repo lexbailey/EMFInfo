@@ -24,7 +24,7 @@ if target == 'ZXSPEC48':
     pound_placeholder = 0x60
     lutname = 'c_lut.bin'
     desc_prefix = 'desc'
-    max_part_size = 0x2c7d
+    max_part_size = 0x2b00
     descr_bits = 14
     evlist_name = "evlist.bin"
     strings_name = "strngs.bin"
