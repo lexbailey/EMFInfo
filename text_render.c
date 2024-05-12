@@ -43,7 +43,14 @@ char get_cur_y(){
 void clear(){
     #ifdef TARGET_ZXSPEC48
     __asm__(
+        "push af\n\t"
+        "push hl\n\t"
+        "ld a, #0x47\n\t"
+        "ld hl, #0x5c8d\n\t"
+        "ld (hl), a\n\t"
         "call 0x0DAF\n\t"
+        "pop hl\n\t"
+        "pop af\n\t"
     );
     #endif
     #ifdef TARGET_PC_LINUX
@@ -107,6 +114,17 @@ void text_zxspec48(char *t, int len){
     );
 }
 #endif
+
+void text_len(char *t, int l){
+    #ifdef TARGET_ZXSPEC48
+    text_zxspec48(t, l);
+    #endif
+    #ifdef TARGET_PC_LINUX
+    for (int i = 0; i< l; i++){
+        printf("%c", t[i]);
+    }
+    #endif 
+}
 
 void text(char *t){
     #ifdef TARGET_ZXSPEC48

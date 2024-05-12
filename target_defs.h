@@ -102,6 +102,26 @@ things that need to be defined per target...
     #define FILE_DESCS_ID_CHAR (4)
     #define DESCR_BITS (14)
     #define NEWLINE "\r"
+
+    #define FG_BLACK_LEN (2)
+    #define BG_BLACK_LEN (2)
+    #define BG_BLACK "\x11\x00"
+    #define BG_BLUE "\x11\x01"
+    #define BG_RED "\x11\x02"
+    #define BG_FUCHSIA "\x11\x03"
+    #define BG_GREEN "\x11\x04"
+    #define BG_CYAN "\x11\x05"
+    #define BG_YELLOW "\x11\x06"
+    #define BG_WHITE "\x11\x07"
+
+    #define FG_BLACK "\x10\x00"
+    #define FG_BLUE "\x10\x01"
+    #define FG_RED "\x10\x02"
+    #define FG_FUCHSIA "\x10\x03"
+    #define FG_GREEN "\x10\x04"
+    #define FG_CYAN "\x10\x05"
+    #define FG_YELLOW "\x10\x06"
+    #define FG_WHITE "\x10\x07"
 #endif
 
 #ifdef TARGET_PC_LINUX
@@ -148,6 +168,28 @@ things that need to be defined per target...
     #define INTERRUPT interrupt
     #define NEWLINE "\n"
     #define AUTOLOAD_DESC0
+
+    #define FG_BLACK_LEN (5)
+    #define BG_BLACK_LEN (5)
+
+    #define FG_BLACK "\x1b[30m"
+    #define FG_RED "\x1b[31m"
+    #define FG_GREEN "\x1b[32m"
+    #define FG_YELLOW "\x1b[33m"
+    #define FG_BLUE "\x1b[34m"
+    #define FG_FUCHSIA "\x1b[35m"
+    #define FG_CYAN "\x1b[36m"
+    #define FG_WHITE "\x1b[37m"
+
+    #define BG_BLACK "\x1b[40m"
+    #define BG_RED "\x1b[41m"
+    #define BG_GREEN "\x1b[42m"
+    #define BG_YELLOW "\x1b[43m"
+    #define BG_BLUE "\x1b[44m"
+    #define BG_FUCHSIA "\x1b[45m"
+    #define BG_CYAN "\x1b[46m"
+    #define BG_WHITE "\x1b[47m"
+
 #endif
 
 // To port this to another system, add extra TARGET option checks here

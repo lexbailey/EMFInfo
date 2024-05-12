@@ -145,7 +145,7 @@ def type_id(s):
         'talk': 0,
         'performance': 1,
         'workshop': 2,
-        'youth workshop': 3,
+        'youthworkshop': 3,
     }.get(s.lower(), 0)
 
 def ltree_seq():
