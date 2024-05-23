@@ -67,6 +67,7 @@ typedef struct {
     unsigned char can_record;
     unsigned int time;
     unsigned char duration;
+    unsigned char has_cw;
     char *title;
     char *venue;
     char *name;
@@ -247,6 +248,7 @@ event_t get_event(unsigned int index){
     ev.time = IBITS(13);
     ev.duration = IBITS(8);
     /*ev.filtered = */CBITS(1);
+    ev.has_cw = CBITS(1);
     ev.title = PBITS(str_bit_len);
     ev.venue = PBITS(str_bit_len);
     ev.name = PBITS(str_bit_len);
@@ -497,12 +499,21 @@ uifunc event_detail(char changed, char key){
 
         curpos(0,8);
         if (descs_loaded[ev.descr_page]){
+            if (ev.has_cw){
+                text(BG_RED "Content Warning:");
+                bgblack();
+                text(" ");
+            }
             dc_truncated_text(255, ev.descr);
         }
         else{
             text("(description not loaded)" NEWLINE "(load descriptions  )");
             curpos(19,9);
             num_text(ev.descr_page);
+            if (ev.has_cw){
+                curpos(0,10);
+                text(BG_RED "!Content Warning in description!");
+            }
         }
 
     }
@@ -812,6 +823,8 @@ uifunc daily_timetable(char changed, char key){
 uifunc timetable(char changed, char key){
     if (changed){
         clear();
+        curpos(0,0);
+        text(FG_WHITE); bgblack();
         if (!evs_loaded || !c_lut_loaded){
             curpos(0,0);
             text("Error: Timetable is not loaded");

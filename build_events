@@ -113,7 +113,7 @@ def prep_event(title, venue, name, pronouns, cost, description):
     addstr(cost, strings)
     descs.append(description)
 
-def make_event(f, title, venue, name, pronouns, cost, time, duration, type_, can_record, descpage, desc):
+def make_event(f, title, venue, name, pronouns, cost, time, duration, type_, can_record, descpage, desc, has_cw):
     title = getstr(title, strings)
     venue = getstr(venue, strings)
     name = getstr(name, strings)
@@ -123,12 +123,16 @@ def make_event(f, title, venue, name, pronouns, cost, time, duration, type_, can
     can_record_i = 0
     if can_record:
         can_record_i = 1
+    has_cw_i = 0
+    if has_cw:
+        has_cw_i = 1
     l = 2
     f.write(bytes([(type_ << 6) | (can_record_i << 5) | ((time>>8) & 0x1f), time & 0xff]))
     l += 1
     f.write(bytes([duration]))
     b = str_id_bits(strings)
     bits = [0] # filter bit is 0 to start
+    bits.extend([has_cw_i])
     bits.extend(tobits(title, b))
     bits.extend(tobits(venue, b))
     bits.extend(tobits(name, b))
@@ -187,15 +191,26 @@ with open(evlist_name, 'wb+') as f:
     ignored = '\r'
     for ev in sorted_evs:
         for s in ['title', 'venue', 'speaker', 'pronouns', 'cost', 'description']:
+            # the content warnings are joined to the description field
+            # all other string fields are encoded separately
+            cw_text = ''
+            if s == 'description':
+                cw = ev.get('content_warning')
+                if cw is not None and cw != '':
+                    cw_text = f'{cw}\n'
             x = ev.get(s, '')
             if x is None:
                 x = ''
+            if s == 'description':
+                x = cw_text + x
             x2 = ''.join([
                 unidecode(c) if c not in exceptions else c
                 for c in x if c not in ignored
             ])
             ev[s] = x2
             all_strings.append(x2)
+    for s in all_strings:
+        print(s)
     lut = analyse_strings(all_strings)
 
     dlens = []
@@ -254,7 +269,9 @@ with open(evlist_name, 'wb+') as f:
         descpage = 0
         while (descpage+1) < len(part_starts) and part_starts[descpage+1] <= ind:
             descpage += 1
-        make_event(f, i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'), time, duration, type_, can_record, descpage, i('description'))
+        cw = ev.get('content_warning')
+        has_cw = cw is not None and cw != ''
+        make_event(f, i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'), time, duration, type_, can_record, descpage, i('description'), has_cw)
 
 with open(strings_name, 'wb+') as f:
     for (p,s) in strings:
