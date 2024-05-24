@@ -90,6 +90,7 @@ emfinfo_linux: $(main_sources) evbuild_intermediate_pc_linux
 
 WATCOM=$(PWD)/watcom
 export WATCOM
+export PATH:=$(WATCOM)/binl64:$(PATH)
 
 emfinfo_msdos.exe: $(main_sources) evbuild_intermediate_pc_msdos
 	$(WATCOM)/binl64/wcl -zastd=c99 -i=$(WATCOM)/h -bc -bt=dos -dTARGET_PC_MSDOS -fe=$@ main.c
