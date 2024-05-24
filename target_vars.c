@@ -27,7 +27,7 @@ uint8_t *map_north;
 uint8_t *map_south;
 #endif
 
-#ifdef TARGET_PC_MSDOS
+#if defined(TARGET_PC_MSDOS) || defined(TARGET_PC_MSDOS_TEXT)
 uint8_t *events_base;
 uint8_t *strings_base;
 uint8_t *map_base;

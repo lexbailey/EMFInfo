@@ -200,8 +200,8 @@ things that need to be defined per target...
 #ifdef TARGET_PC_MSDOS
     #define __TARGET_KNOWN
     #define STORAGE_MEDIUM "disk"
-    #define ENTER_KEY ('\n')
-    #define BACKSPACE_KEY (127)
+    #define ENTER_KEY ('\r')
+    #define BACKSPACE_KEY (8)
     #define MAX_PRINTABLE (0x7F)
     #define BACKSPACE_NAME "Backspace"
     #define BOXDRAW_BR "-"
@@ -264,6 +264,80 @@ things that need to be defined per target...
     #define BG_WHITE "\x1b[47m"
 
 #endif
+
+
+
+
+#ifdef TARGET_PC_MSDOS_TEXT
+    #define __TARGET_KNOWN
+    #define LINEAR_TEXT
+    #define STORAGE_MEDIUM "disk"
+    #define ENTER_KEY ('\r')
+    #define BACKSPACE_KEY (8)
+    #define MAX_PRINTABLE (0x7F)
+    #define BACKSPACE_NAME "Backspace"
+    #define BOXDRAW_BR "-"
+    #define BOXDRAW_BL "-"
+    #define BOXDRAW_TR "-"
+    #define BOXDRAW_TL "-"
+    #define BOXDRAW_L "|"
+    #define BOXDRAW_R "|"
+    #define BOXDRAW_B "-"
+    #define BOXDRAW_T "-"
+    #include <string.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <stdint.h>
+    #include <conio.h>
+    #include <i86.h>
+    #include <dos.h>
+    #define MAP_BASE (map_full)
+    #define MAP_NORTH_BASE (map_north)
+    #define MAP_SOUTH_BASE (map_south)
+    #define MAIN_CAN_RETURN
+    #define COPYRIGHT "(C)"
+    // This is the ISO-8859-1 encoding of the pound symbol
+    // it's not actually printed, only used as a placeholder value for identfying the pound in the custom encoding, so it's fine that this is not utf-8
+    #define GBP_CHAR (0xa3)
+    // This _is_ utf-8 tho
+    #define GBP "£"
+    #define LOADMODE LM_MALLOC
+    #define FILE_MAP "map.png"
+    #define FILE_EVENTS "evMSD.bin"
+    #define FILE_C_LUT "clMSD.bin"
+    #define FILE_STRINGS "sMSD.bin"
+    #define FILE_DESCS "dMSD0.bin"
+    #define FILE_DESCS_ID_CHAR (4)
+    #define DESCR_BITS (24)
+    #define NEWLINE "\n"
+    #define AUTOLOAD_DESC0
+
+    #define SCREEN_WIDTH (get_term_width())
+
+    #define FG_BLACK_LEN (0)
+    #define BG_BLACK_LEN (0)
+
+    #define FG_BLACK ""
+    #define FG_RED ""
+    #define FG_GREEN ""
+    #define FG_YELLOW ""
+    #define FG_BLUE ""
+    #define FG_FUCHSIA ""
+    #define FG_CYAN ""
+    #define FG_WHITE ""
+
+    #define BG_BLACK ""
+    #define BG_RED ""
+    #define BG_GREEN ""
+    #define BG_YELLOW ""
+    #define BG_BLUE ""
+    #define BG_FUCHSIA ""
+    #define BG_CYAN ""
+    #define BG_WHITE ""
+
+#endif
+
+
 
 // To port this to another system, add extra TARGET option checks here
 

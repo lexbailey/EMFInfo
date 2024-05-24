@@ -7,7 +7,7 @@ signed char bitstream_pos;
 #ifdef TARGET_PC_LINUX
     #define BITSTREAM_OUT_TYPE long unsigned int
 #endif
-#ifdef TARGET_PC_MSDOS
+#if defined(TARGET_PC_MSDOS) || defined(TARGET_PC_MSDOS_TEXT)
     #define BITSTREAM_OUT_TYPE unsigned int
 #endif
 

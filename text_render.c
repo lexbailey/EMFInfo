@@ -28,9 +28,13 @@ void curpos(char x, char y){
         "rst #0x10 \n\t"
     );
     #else
-        printf("\033[%d;%dH", y+1, x+1);
-        __cur_x = x;
-        __cur_y = y;
+        #ifdef TARGET_PC_MSDOS_TEXT
+            // Linear text mode, no way to move cursor
+        #else
+            printf("\033[%d;%dH", y+1, x+1);
+            __cur_x = x;
+            __cur_y = y;
+        #endif
     #endif
 }
 
@@ -70,6 +74,10 @@ void clear(){
     #ifdef TARGET_PC_MSDOS
         printf("\033[2J");
         curpos(0,0);
+    #endif
+    #ifdef TARGET_PC_MSDOS_TEXT
+        // not actually clearing, just putting a ruler there
+        printf("========================================\n");
     #endif
 }
 
@@ -207,7 +215,7 @@ char get_key_press(){
     #ifdef TARGET_PC_LINUX
         return getc(stdin);
     #endif
-    #ifdef TARGET_PC_MSDOS
+    #if defined(TARGET_PC_MSDOS) || defined(TARGET_PC_MSDOS_TEXT)
         fflush(stdout);
         return getch();
     #endif
@@ -234,7 +242,7 @@ char get_key_press(){
     }
 #endif
 
-#ifdef TARGET_PC_MSDOS
+#if defined(TARGET_PC_MSDOS) || defined(TARGET_PC_MSDOS_TEXT)
     const int known_mode_widths[] = {
         40,40,80,80,40,40,80,80,132
     };

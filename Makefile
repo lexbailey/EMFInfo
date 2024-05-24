@@ -95,7 +95,10 @@ msdos_descs: evbuild_intermediate_pc_msdos
 	echo TODO fix descriptions for MSDOS
 
 emfinfo_msdos.exe: $(main_sources) evbuild_intermediate_pc_msdos msdos_descs
-	$(WATCOM)/binl/wcl -zastd=c99 -i=$(WATCOM)/h -bc -bt=dos -dTARGET_PC_MSDOS -fe=$@ main.c # $(WATCOM)/lib386/dos/pc983r.lib
+	$(WATCOM)/binl/wcl -zastd=c99 -i=$(WATCOM)/h -bc -bt=dos -dTARGET_PC_MSDOS -fe=$@ main.c
+
+emfinfo_msdos_textonly.exe: $(main_sources) evbuild_intermediate_pc_msdos msdos_descs
+	$(WATCOM)/binl/wcl -zastd=c99 -i=$(WATCOM)/h -bc -bt=dos -dTARGET_PC_MSDOS_TEXT -fe=$@ main.c
 
 all: emfinfo_zxspec48.tap emfinfo_linux
 

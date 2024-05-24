@@ -18,7 +18,7 @@ void show_image(unsigned char *img_base){
 }
 #endif
 
-#ifdef TARGET_PC_MSDOS
+#if defined(TARGET_PC_MSDOS) || defined(TARGET_PC_MSDOS_TEXT)
 void show_image(unsigned char *img_base){
     // TODO
 }

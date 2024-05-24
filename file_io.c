@@ -129,7 +129,7 @@ Other platforms may use other types in place of size_t.
     }
 #endif
 
-#if defined(TARGET_PC_LINUX) || defined(TARGET_PC_MSDOS)
+#if defined(TARGET_PC_LINUX) || defined(TARGET_PC_MSDOS) || defined(TARGET_PC_MSDOS_TEXT)
     size_t flen(char *fname){
         FILE *f = fopen(fname, "rb");
         if (f == NULL){

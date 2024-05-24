@@ -10,6 +10,12 @@
 #define EV_HEADER_LEN (6)
 #define DECOMP_STR_MAX (500)
 
+#ifdef LINEAR_TEXT
+    #define NEXTLINE text("\n");
+#else
+    #define NEXTLINE
+#endif
+
 typedef void (*(*uifunc)(char, char))(); //close enough. I technically can't actually write the type I want, but I can aggressively cast to this approximation
 
 uifunc menu(char, char);
@@ -326,12 +332,16 @@ uifunc bugreport(char changed, char key){
         clear();
         curpos(0,0);
         text("EMF Info Bug reporting");
+        NEXTLINE
         curpos(0,2);
         text("Please report bugs on GitHub");
+        NEXTLINE
         curpos(0,4);
         text("github.com/lexbailey/EMFInfo");
+        NEXTLINE
         curpos(1,20);
         text(FG_GREEN "Q" FG_WHITE " - Main menu");
+        NEXTLINE
     }
     if (key == 'q'){
         return (uifunc)menu;
@@ -344,26 +354,36 @@ uifunc credits(char changed, char key){
         clear();
         curpos(0,0);
         text("EMF Info");
+        NEXTLINE
         curpos(0,2);
         text("Author: Lex Bailey (they/them)");
+        NEXTLINE
         #ifdef USES_ZX0
             curpos(0,4);
             text("EMF Info uses ZX0 for compressed");
+            NEXTLINE
             curpos(0,5);
             text("map images.");
+            NEXTLINE
         #endif
         curpos(0,7);
         text("Map based on data " COPYRIGHT " Electromag-");
+        NEXTLINE
         curpos(0,8);
         text("netic Field and OpenStreetMap");
+        NEXTLINE
         curpos(0,9);
         text("contributers.");
+        NEXTLINE
         curpos(0,11);
         text("Timetable data " COPYRIGHT " Electromagnetic");
+        NEXTLINE
         curpos(0,12);
         text("Field.");
+        NEXTLINE
         curpos(1,20);
         text(FG_GREEN "Q" FG_WHITE " - Main menu");
+        NEXTLINE
     }
     if (key == 'q'){
         return (uifunc)menu;
@@ -376,19 +396,26 @@ uifunc menu(char changed, char key){
         clear();
         curpos(6,0);
         text("EMF Info Main Menu");
+        NEXTLINE
         curpos(1,2);
         text(FG_GREEN "T" FG_WHITE " - Timetable");
+        NEXTLINE
         curpos(1,3);
         text(FG_GREEN "M" FG_WHITE " - Map");
+        NEXTLINE
         curpos(1,4);
         text(FG_GREEN "L" FG_WHITE " - Load modules from " STORAGE_MEDIUM);
+        NEXTLINE
         curpos(1,5);
         text(FG_GREEN "B" FG_WHITE " - Bug report");
+        NEXTLINE
         curpos(1,6);
         text(FG_GREEN "C" FG_WHITE " - Credits");
+        NEXTLINE
         #ifdef MAIN_CAN_RETURN
             curpos(1,20);
             text(FG_GREEN "Q" FG_WHITE " - Exit");
+            NEXTLINE
         #endif
     }
     if (key == 't'){
@@ -466,6 +493,7 @@ uifunc event_detail(char changed, char key){
         bgblack();
         text(FG_WHITE":"FG_YELLOW);
         dc_truncated_text((32*3)-strlen(evstr[ev.type]),ev.title);
+        NEXTLINE
 
         curpos(0,3);
         text(FG_CYAN "By ");
@@ -473,16 +501,19 @@ uifunc event_detail(char changed, char key){
         text(" (");
         dc_truncated_text(maxchars-2,ev.pronouns);
         text(")"FG_WHITE);
+        NEXTLINE
 
         curpos(0,5);
         text("At ");
         dc_truncated_text(maxchars-3, ev.venue);
+        NEXTLINE
 
         curpos(0,6);
         text("From " FG_RED);
         time_text(ev.time);
         text(FG_WHITE" for "FG_RED);
         duration_text(ev.duration);
+        NEXTLINE
 
         curpos(0,7);
         text(FG_WHITE"Recording:");
@@ -492,10 +523,12 @@ uifunc event_detail(char changed, char key){
         else{
             text("no");
         }
+        NEXTLINE
         if (ev.type != EVTYPE_TALK){
             curpos(14,7);
             text("Cost: ");
             dc_truncated_text(maxchars - 20,ev.cost);
+            NEXTLINE
         }
 
         curpos(0,8);
@@ -506,14 +539,17 @@ uifunc event_detail(char changed, char key){
                 text(" ");
             }
             dc_truncated_text(255, ev.descr);
+            NEXTLINE
         }
         else{
-            text("(description not loaded)" NEWLINE "(load descriptions  )");
-            curpos(19,9);
+            text("(description not loaded)" NEWLINE "(load descriptions ");
             num_text(ev.descr_page);
+            text(")");
+            NEXTLINE
             if (ev.has_cw){
                 curpos(0,10);
                 text(BG_RED "!Content Warning in description!");
+                NEXTLINE
             }
         }
 
@@ -557,6 +593,7 @@ void apply_filters(){
     clear();
     curpos(3,11);
     text("Filtering, please wait..."); // may take a while
+    NEXTLINE
     filt_event_count = 0;
     signed char ds = filt_day;
     ds -= day0_index;
@@ -632,16 +669,22 @@ uifunc search(char changed, char key){
         clear();
         curpos(0,0);
         text("Type a search term then press");
+        NEXTLINE
         curpos(0,1);
         text("enter. " BACKSPACE_NAME " to delete or exit.");
-        curpos(10,11);
-        text(BOXDRAW_BR BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_BL);
-        curpos(10,13);
-        text(BOXDRAW_TR BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_TL);
-        curpos(21,12);
-        text(BOXDRAW_R);
-        curpos(10,12);
-        text(BOXDRAW_L);
+        NEXTLINE
+
+        #ifdef LINEAR_TEXT
+        #else
+            curpos(10,11);
+            text(BOXDRAW_BR BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_BL);
+            curpos(10,13);
+            text(BOXDRAW_TR BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_TL);
+            curpos(21,12);
+            text(BOXDRAW_R);
+            curpos(10,12);
+            text(BOXDRAW_L);
+        #endif
         search_cur = searchterm;
         *search_cur = '\0';
     }
@@ -666,6 +709,7 @@ uifunc search(char changed, char key){
             curpos(11,12);
             text("          ");
             curpos(11,12);
+            NEXTLINE
             text(searchterm);
         }
         else{
@@ -673,6 +717,7 @@ uifunc search(char changed, char key){
         }
     }
     if (key == ENTER_KEY){
+        NEXTLINE
         filt_text = searchterm;
         apply_filters();
         return (uifunc)timetable_list;
@@ -697,17 +742,20 @@ uifunc timetable_list(char changed, char key){
             text(daynames[filt_day]);
         }
         text(")");
+        NEXTLINE
         curpos(0,1);
         text(FG_RED "Pg ");
         num_text(page);
         text("/");
         num_text(num_pages);
-        curpos(12,1);
-        text(FG_GREEN "N" FG_WHITE ":Next,"FG_GREEN "P" FG_WHITE ":Prev,"FG_GREEN "Q" FG_WHITE ":Back");
+        curpos(11,1);
+        text(FG_GREEN " N" FG_WHITE ":Next,"FG_GREEN "P" FG_WHITE ":Prev,"FG_GREEN "Q" FG_WHITE ":Back");
+        NEXTLINE
 
         if (filt_event_count == 0){
             curpos(9,11);
             text("(No results)");
+            NEXTLINE
         }
 
         unsigned int index = page_starts[page-1];
@@ -731,11 +779,18 @@ uifunc timetable_list(char changed, char key){
             num_text(i);
             text(FG_WHITE);
             text(evcol[ev.type]);
-            text("#" FG_YELLOW); bgblack();
+            #ifdef LINEAR_TEXT
+                text("-" FG_YELLOW);
+            #else
+                text("#" FG_YELLOW);
+            #endif
+             bgblack();
             dc_truncated_text(maxchars, ev.title);
-            curpos(2,line+1);
-            text(FG_CYAN);
+            NEXTLINE
+            curpos(0,line+1);
+            text("  " FG_CYAN);
             dc_truncated_text(maxchars, ev.name);
+            NEXTLINE
             i++;
             index++;
             max_offset ++;
@@ -787,12 +842,15 @@ uifunc daily_timetable(char changed, char key){
         clear();
         curpos(6,0);
         text("EMF Timetable");
+        NEXTLINE
         curpos(9,2);
         num_text(num_events);
         text(" events");
+        NEXTLINE
         curpos(0,3);
         text("Filter by day");
-        for (char i = 7; i>0; i--){
+        NEXTLINE
+        for (char i = 1; i<=7; i++){
             curpos(1, 4+i);
             char d = i-1;
             int tot_today = events_per_day[d];
@@ -805,10 +863,12 @@ uifunc daily_timetable(char changed, char key){
                 text(" (");
                 num_text(tot_today);
                 text(" events)");
+                NEXTLINE
             }
         }
         curpos(1,20);
         text(FG_GREEN "Q" FG_WHITE " - Back");
+        NEXTLINE
     }
     if (key >= '0' && key <= '6'){
         filt_day = key-'0';
@@ -830,28 +890,37 @@ uifunc timetable(char changed, char key){
         if (!evs_loaded || !c_lut_loaded){
             curpos(0,0);
             text("Error: Timetable is not loaded");
+            NEXTLINE
             curpos(0,1);
             text("Press " FG_GREEN "Q, then load the");
+            NEXTLINE
             curpos(0,2);
             text("timetable and try again.");
+            NEXTLINE
         }
         else{
             curpos(6,0);
             text("EMF Timetable");
+            NEXTLINE
             curpos(9,2);
             num_text(num_events);
             text(" events");
+            NEXTLINE
             curpos(1,4);
             text(FG_GREEN "A" FG_WHITE " - Show All");
             if (filt_type != 0xff){ text(" (filtered)"); }
+            NEXTLINE
             curpos(1,5);
             text(FG_GREEN "D" FG_WHITE " - By Day");
             if (filt_type != 0xff){ text(" (filtered)"); }
+            NEXTLINE
             curpos(1,6);
             text(FG_GREEN "S" FG_WHITE " - Search");
             if (filt_type != 0xff){ text(" (filtered)"); }
+            NEXTLINE
             curpos(1,8);
             text(FG_GREEN "F" FG_WHITE " - Change filter mode");
+            NEXTLINE
 
 
             curpos(2,10);
@@ -866,10 +935,12 @@ uifunc timetable(char changed, char key){
                 text("s");
                 bgblack();
             }
+            NEXTLINE
 
 
             curpos(1,20);
             text(FG_GREEN "Q" FG_WHITE " - Main menu");
+            NEXTLINE
         }
     }
 
@@ -913,18 +984,23 @@ uifunc map(char changed, char key){
             clear();
             curpos(0,0);
             text("Map module not loaded");
+            NEXTLINE
         }
         else{
             show_image(MAP_BASE);
             curpos(0,0);
             text("EMF Map");
+            NEXTLINE
             curpos(1,2);
             text(FG_GREEN "N" FG_WHITE " - Zoom North");
+            NEXTLINE
             curpos(1,3);
             text(FG_GREEN "S" FG_WHITE " - Zoom South");
+            NEXTLINE
         }
         curpos(1,4);
         text(FG_GREEN "Q" FG_WHITE " - Main menu");
+        NEXTLINE
     }
     if (map_loaded){
         if (key == 'n'){ return (uifunc)mapnorth; }
@@ -975,52 +1051,53 @@ uifunc modules(char changed, char key){
         clear();
         curpos(0,0);
         text("Manage loaded modules");
-
+        NEXTLINE
         curpos(0,2);
         text("ID | Name             | Loaded?");
+        NEXTLINE
         curpos(0,3);
         text("-------------------------------");
-        curpos(1,4);
-        text(FG_GREEN "M" FG_WHITE " | Map data         |");
-        curpos(1,5);
-        text(FG_GREEN "E" FG_WHITE " | Event list       |");
-        curpos(1,6);
-        text(FG_GREEN "C" FG_WHITE " | Character table  |");
-        curpos(1,7);
-        text(FG_GREEN "S" FG_WHITE " | Event text       |");
+        NEXTLINE
+        curpos(0,4);
+        text(FG_GREEN " M" FG_WHITE " | Map data         | ");
+        if (map_loaded){text("Yes");}else{text("No");}
+        NEXTLINE
+        curpos(0,5);
+        text(FG_GREEN " E" FG_WHITE " | Event list       | ");
+        if (evs_loaded){text("Yes");}else{text("No");}
+        NEXTLINE
+        curpos(0,6);
+        text(FG_GREEN " C" FG_WHITE " | Character table  | ");
+        if (c_lut_loaded){text("Yes");}else{text("No");}
+        NEXTLINE
+        curpos(0,7);
+        text(FG_GREEN " S" FG_WHITE " | Event text       | ");
+        if (strings_loaded){text("Yes");}else{text("No");}
+        NEXTLINE
         for (int i = 0; i < n_desc_modules; i++){
             int line = 8+i;
-            curpos(1,line);
-            text(FG_GREEN);
+            curpos(0,line);
+            text(FG_GREEN " ");
             num_text(i);
-            text(FG_WHITE);
-            curpos(3,line);
-            text("| Descriptions ");
+            text(FG_WHITE " | Descriptions ");
             num_text(i);
-            curpos(22,line);
-            text("|");
-
-            curpos(24,line);
+            text("   | ");
             if (descs_loaded[i]){text("Yes");}else{text("No");}
+            NEXTLINE
         }
         curpos(0,8+n_desc_modules);
         text("-------------------------------");
+        NEXTLINE
 
-        curpos(24,4);
-        if (map_loaded){text("Yes");}else{text("No");}
-        curpos(24,5);
-        if (evs_loaded){text("Yes");}else{text("No");}
-        curpos(24,6);
-        if (c_lut_loaded){text("Yes");}else{text("No");}
-        curpos(24,7);
-        if (strings_loaded){text("Yes");}else{text("No");}
 
 
         curpos(1,19);
         text("Type an ID to load a module");
+        NEXTLINE
 
         curpos(1,20);
         text(FG_GREEN "Q" FG_WHITE " - Main menu");
+        NEXTLINE
     }
     if (key == 'm'){load_map(); return modules(1,'\0');}
     if (key == 'e'){
@@ -1088,6 +1165,7 @@ int main(){
     #endif
     curpos(0,0);
     text("Loading data files...");
+    NEXTLINE
     load_map();
     load_evlist();
     if (evs_loaded){ parse_ev_file_consts(); }
