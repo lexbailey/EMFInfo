@@ -282,7 +282,7 @@ unsigned char get_event_type(unsigned int index){
 }
 
 // finds the filter bit for the given event index
-signed char *filt_ptr(unsigned int index){ return events_base + 8 + mul(index, ev_size); }
+unsigned char *filt_ptr(unsigned int index){ return events_base + 8 + mul(index, ev_size); }
 // returns a negative number if the event is filtered out, otherwise returns a positive number
 signed char filt_get(unsigned int index){ return *filt_ptr(index); }
 // sets the filter bit (to filter out the event)
@@ -460,6 +460,7 @@ uifunc event_detail(char changed, char key){
         event_t ev;
         ev = get_event(ev_id); // can't do this on the same as the above line, SDCC bug #3121
         curpos(0,0);
+        int maxchars = SCREEN_WIDTH;
         text(evcol[ev.type]);
         text(evstr[ev.type]);
         bgblack();
@@ -468,14 +469,14 @@ uifunc event_detail(char changed, char key){
 
         curpos(0,3);
         text(FG_CYAN "By ");
-        dc_truncated_text(29,ev.name);
+        dc_truncated_text(maxchars-3,ev.name);
         text(" (");
-        dc_truncated_text(30,ev.pronouns);
+        dc_truncated_text(maxchars-2,ev.pronouns);
         text(")"FG_WHITE);
 
         curpos(0,5);
         text("At ");
-        dc_truncated_text(29, ev.venue);
+        dc_truncated_text(maxchars-3, ev.venue);
 
         curpos(0,6);
         text("From " FG_RED);
@@ -494,7 +495,7 @@ uifunc event_detail(char changed, char key){
         if (ev.type != EVTYPE_TALK){
             curpos(14,7);
             text("Cost: ");
-            dc_truncated_text(12,ev.cost);
+            dc_truncated_text(maxchars - 20,ev.cost);
         }
 
         curpos(0,8);
@@ -685,9 +686,10 @@ uifunc timetable_list(char changed, char key){
     //static int n_pages = 1;
     if (changed){
         //n_pages = div10(num_events)+1;
-        clear();
+        clear(); bgblack();
         curpos(0,0);
-        text("EMF Timetable (");
+        int maxchars = SCREEN_WIDTH - 2;
+        text(FG_WHITE "EMF Timetable (");
         if (filt_day == 0xff){
             text("all days");
         }
@@ -730,10 +732,10 @@ uifunc timetable_list(char changed, char key){
             text(FG_WHITE);
             text(evcol[ev.type]);
             text("#" FG_YELLOW); bgblack();
-            dc_truncated_text(30,ev.title);
+            dc_truncated_text(maxchars, ev.title);
             curpos(2,line+1);
             text(FG_CYAN);
-            dc_truncated_text(30,ev.name);
+            dc_truncated_text(maxchars, ev.name);
             i++;
             index++;
             max_offset ++;
@@ -901,6 +903,7 @@ uifunc timetable(char changed, char key){
 
 #ifdef MAIN_CAN_RETURN
     uifunc terminate(char changed, char key){
+        return (uifunc)terminate;
     }
 #endif
 

@@ -103,6 +103,8 @@ things that need to be defined per target...
     #define DESCR_BITS (14)
     #define NEWLINE "\r"
 
+    #define SCREEN_WIDTH (32)
+
     #define FG_BLACK_LEN (2)
     #define BG_BLACK_LEN (2)
     #define BG_BLACK "\x11\x00"
@@ -146,6 +148,7 @@ things that need to be defined per target...
     #include <stdlib.h>
     #include <signal.h>
     #include <stdint.h>
+    #include <sys/ioctl.h>
     #define MAP_BASE (map_full)
     #define MAP_NORTH_BASE (map_north)
     #define MAP_SOUTH_BASE (map_south)
@@ -168,6 +171,76 @@ things that need to be defined per target...
     #define INTERRUPT interrupt
     #define NEWLINE "\n"
     #define AUTOLOAD_DESC0
+
+    #define SCREEN_WIDTH (get_term_width())
+
+    #define FG_BLACK_LEN (5)
+    #define BG_BLACK_LEN (5)
+
+    #define FG_BLACK "\x1b[30m"
+    #define FG_RED "\x1b[31m"
+    #define FG_GREEN "\x1b[32m"
+    #define FG_YELLOW "\x1b[33m"
+    #define FG_BLUE "\x1b[34m"
+    #define FG_FUCHSIA "\x1b[35m"
+    #define FG_CYAN "\x1b[36m"
+    #define FG_WHITE "\x1b[37m"
+
+    #define BG_BLACK "\x1b[40m"
+    #define BG_RED "\x1b[41m"
+    #define BG_GREEN "\x1b[42m"
+    #define BG_YELLOW "\x1b[43m"
+    #define BG_BLUE "\x1b[44m"
+    #define BG_FUCHSIA "\x1b[45m"
+    #define BG_CYAN "\x1b[46m"
+    #define BG_WHITE "\x1b[47m"
+
+#endif
+
+#ifdef TARGET_PC_MSDOS
+    #define __TARGET_KNOWN
+    #define STORAGE_MEDIUM "disk"
+    #define ENTER_KEY ('\n')
+    #define BACKSPACE_KEY (127)
+    #define MAX_PRINTABLE (0x7F)
+    #define BACKSPACE_NAME "Backspace"
+    #define BOXDRAW_BR "-"
+    #define BOXDRAW_BL "-"
+    #define BOXDRAW_TR "-"
+    #define BOXDRAW_TL "-"
+    #define BOXDRAW_L "|"
+    #define BOXDRAW_R "|"
+    #define BOXDRAW_B "-"
+    #define BOXDRAW_T "-"
+    #include <string.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <stdint.h>
+    #include <conio.h>
+    #include <i86.h>
+    #include <dos.h>
+    #define MAP_BASE (map_full)
+    #define MAP_NORTH_BASE (map_north)
+    #define MAP_SOUTH_BASE (map_south)
+    #define MAIN_CAN_RETURN
+    #define COPYRIGHT "(C)"
+    // This is the ISO-8859-1 encoding of the pound symbol
+    // it's not actually printed, only used as a placeholder value for identfying the pound in the custom encoding, so it's fine that this is not utf-8
+    #define GBP_CHAR (0xa3)
+    // This _is_ utf-8 tho
+    #define GBP "£"
+    #define LOADMODE LM_MALLOC
+    #define FILE_MAP "map.png"
+    #define FILE_EVENTS "evMSD.bin"
+    #define FILE_C_LUT "clMSD.bin"
+    #define FILE_STRINGS "sMSD.bin"
+    #define FILE_DESCS "dMSD0.bin"
+    #define FILE_DESCS_ID_CHAR (4)
+    #define DESCR_BITS (24)
+    #define NEWLINE "\n"
+    #define AUTOLOAD_DESC0
+
+    #define SCREEN_WIDTH (get_term_width())
 
     #define FG_BLACK_LEN (5)
     #define BG_BLACK_LEN (5)

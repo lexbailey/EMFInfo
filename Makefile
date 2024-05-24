@@ -26,15 +26,20 @@ schedule.json:
 # TODO fix the mess around building the events files
 evlist_default.bin strings_default.bin c_lut_default.bin: evbuild_intermediate_pc_linux ;
 c_lut.bin evlist.bin strngs.bin: evbuild_intermediate_zxspec48 ;
+evMSD.bin sMSD.bin clMSD.bin: evbuild_intermediate_zxspec48 ;
 
 .INTERMEDIATE: evbuild_intermediate_pc_linux
 .INTERMEDIATE: evbuild_intermediate_zxspec48
+.INTERMEDIATE: evbuild_intermediate_pc_msdos
 
 evbuild_intermediate_zxspec48: build_events schedule.json
 	./build_events ZXSPEC48
 
 evbuild_intermediate_pc_linux: build_events schedule.json
 	./build_events PC_LINUX
+
+evbuild_intermediate_pc_msdos: build_events schedule.json
+	./build_events PC_MSDOS
 
 main.zxspec48.bin: crt0.s dzx0.s mapdata.h $(main_sources)
 	sdasz80 -l -o -s -g -j -y -a crt0.s 
@@ -73,8 +78,6 @@ descriptions.tap: evbuild_intermediate_zxspec48
 	$(MAKE) $(patsubst %.bin,%.bin.tap,$(shell echo desc?.bin))
 	cat desc*.bin.tap > $@
 
-test:
-
 emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap mapzx.bin.tap evlist.bin.tap c_lut.bin.tap strngs.bin.tap descriptions.tap
 	cat $^ > $@
 
@@ -84,6 +87,15 @@ emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap mapzx.bin.tap evlist.bin
 emfinfo_linux: $(main_sources) evbuild_intermediate_pc_linux
 	cc -gdwarf -DTARGET_PC_LINUX -c main.c -o main.o
 	cc -gdwarf -o $@ main.o
+
+WATCOM=/usr/bin/watcom
+export WATCOM
+
+msdos_descs: evbuild_intermediate_pc_msdos
+	echo TODO fix descriptions for MSDOS
+
+emfinfo_msdos.exe: $(main_sources) evbuild_intermediate_pc_msdos msdos_descs
+	$(WATCOM)/binl/wcl -zastd=c99 -i=$(WATCOM)/h -bc -bt=dos -dTARGET_PC_MSDOS -fe=$@ main.c # $(WATCOM)/lib386/dos/pc983r.lib
 
 all: emfinfo_zxspec48.tap emfinfo_linux
 

@@ -17,3 +17,9 @@ void show_image(unsigned char *img_base){
     // TODO
 }
 #endif
+
+#ifdef TARGET_PC_MSDOS
+void show_image(unsigned char *img_base){
+    // TODO
+}
+#endif

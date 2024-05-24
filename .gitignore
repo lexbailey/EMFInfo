@@ -16,3 +16,4 @@ sdcc-4.4.0.tar.bz2
 sdcc-4.4.0/
 *.zx0
 mapdata.h
+*.exe

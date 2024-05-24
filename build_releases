@@ -8,6 +8,7 @@ mkdir -p releases
 for target in [
         "zxspec48.tap",
         "linux",
+        "msdos",
     ]:
     $name = f"emfinfo_{target}"
     make $name

@@ -7,6 +7,9 @@ signed char bitstream_pos;
 #ifdef TARGET_PC_LINUX
     #define BITSTREAM_OUT_TYPE long unsigned int
 #endif
+#ifdef TARGET_PC_MSDOS
+    #define BITSTREAM_OUT_TYPE unsigned int
+#endif
 
 BITSTREAM_OUT_TYPE bitstream_get(char bits){
     char rembits = bits;

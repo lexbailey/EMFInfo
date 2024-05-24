@@ -8,7 +8,7 @@ from unidecode import unidecode
 import argparse
 
 p = argparse.ArgumentParser()
-p.add_argument("target", choices=['PC_LINUX', 'ZXSPEC48'])
+p.add_argument("target", choices=['PC_LINUX', 'ZXSPEC48', 'PC_MSDOS'])
 args = p.parse_args()
 
 target = args.target
@@ -28,6 +28,11 @@ if target == 'ZXSPEC48':
     descr_bits = 14
     evlist_name = "evlist.bin"
     strings_name = "strngs.bin"
+if target == 'PC_MSDOS':
+    lutname = 'clMSD.bin'
+    evlist_name = "evMSD.bin"
+    strings_name = "sMSD.bin"
+    desc_prefix = 'dMSD'
 
 strings = [
     (0, b'\0')
