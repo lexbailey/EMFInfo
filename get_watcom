@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+mkdir -p watcom
+pushd watcom
+wget https://github.com/open-watcom/open-watcom-v2/releases/download/Current-build/ow-snapshot.tar.xz
+tar -xJf ow-snapshot.tar.xz

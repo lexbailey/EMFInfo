@@ -88,14 +88,14 @@ emfinfo_linux: $(main_sources) evbuild_intermediate_pc_linux
 	cc -gdwarf -DTARGET_PC_LINUX -c main.c -o main.o
 	cc -gdwarf -o $@ main.o
 
-WATCOM=/usr/bin/watcom
+WATCOM=$(PWD)/watcom
 export WATCOM
 
 emfinfo_msdos.exe: $(main_sources) evbuild_intermediate_pc_msdos
-	$(WATCOM)/binl/wcl -zastd=c99 -i=$(WATCOM)/h -bc -bt=dos -dTARGET_PC_MSDOS -fe=$@ main.c
+	$(WATCOM)/binl64/wcl -zastd=c99 -i=$(WATCOM)/h -bc -bt=dos -dTARGET_PC_MSDOS -fe=$@ main.c
 
 emfinfo_msdos_textonly.exe: $(main_sources) evbuild_intermediate_pc_msdos
-	$(WATCOM)/binl/wcl -zastd=c99 -i=$(WATCOM)/h -bc -bt=dos -dTARGET_PC_MSDOS_TEXT -fe=$@ main.c
+	$(WATCOM)/binl64/wcl -zastd=c99 -i=$(WATCOM)/h -bc -bt=dos -dTARGET_PC_MSDOS_TEXT -fe=$@ main.c
 
 all: emfinfo_zxspec48.tap emfinfo_linux
 
