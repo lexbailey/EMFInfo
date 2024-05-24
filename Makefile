@@ -21,7 +21,7 @@ $(ZX0): ZX0/src/zx0.c
 	cd ZX0/src && $(MAKE) zx0
 
 schedule.json:
-	curl -Lo $@ https://www.emfcamp.org/schedule/2022.json
+	curl -Lo $@ https://www.emfcamp.org/schedule/2024.json
 
 # TODO fix the mess around building the events files
 evlist_default.bin strings_default.bin c_lut_default.bin: evbuild_intermediate_pc_linux ;

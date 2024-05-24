@@ -195,7 +195,7 @@ with open(evlist_name, 'wb+') as f:
             # all other string fields are encoded separately
             cw_text = ''
             if s == 'description':
-                cw = ev.get('content_warning')
+                cw = ev.get('content_note')
                 if cw is not None and cw != '':
                     cw_text = f'{cw}\n'
             x = ev.get(s, '')
@@ -209,8 +209,6 @@ with open(evlist_name, 'wb+') as f:
             ])
             ev[s] = x2
             all_strings.append(x2)
-    for s in all_strings:
-        print(s)
     lut = analyse_strings(all_strings)
 
     dlens = []
@@ -269,7 +267,7 @@ with open(evlist_name, 'wb+') as f:
         descpage = 0
         while (descpage+1) < len(part_starts) and part_starts[descpage+1] <= ind:
             descpage += 1
-        cw = ev.get('content_warning')
+        cw = ev.get('content_note')
         has_cw = cw is not None and cw != ''
         make_event(f, i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'), time, duration, type_, can_record, descpage, i('description'), has_cw)
 
