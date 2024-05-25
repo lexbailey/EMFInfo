@@ -6,6 +6,7 @@ $RAISE_SUBPROC_ERROR = True
 $PATH.insert(0,"$PWD/sdcc-4.4.0/bin/")
 
 mkdir -p releases
+mkdir -p release_archives
 for target in [
         "zxspec48.tap",
         "linux",
@@ -51,5 +52,10 @@ for package, filelist in packages.items():
             cp @(to_copy) releases/@(package)/@(to_copy)
         else:
             cp @(to_copy[0]) releases/@(package)/@(to_copy[1])
+
+    if len(filelist) > 1:
+        zip release_archives/@(package).zip releases/@(package)
+    else:
+        cp releases/@(package)/* release_archives/.
 
 

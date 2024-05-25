@@ -20,24 +20,6 @@ jobs:
             sudo pip3 install -r requirements.txt
       - name: Build release files
         run: ./build_releases
-      - uses: actions/upload-artifact@v4
+      - uses: ncipollo/release-action@v1
         with:
-          name: EMFInfo_linux
-          path: releases/linux
-          if-no-files-found: error
-          retention-days: 90
-          overwrite: true
-      - uses: actions/upload-artifact@v4
-        with:
-          name: EMFInfo_zxspectrum
-          path: releases/zxspectrum
-          if-no-files-found: error
-          retention-days: 90
-          overwrite: true
-      - uses: actions/upload-artifact@v4
-        with:
-          name: EMFInfo_msdos
-          path: releases/ms-dos
-          if-no-files-found: error
-          retention-days: 90
-          overwrite: true
+          artifacts: "release_archives/*"
