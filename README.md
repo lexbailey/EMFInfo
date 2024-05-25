@@ -1,7 +1,5 @@
 # EMF Info
 
-!! Warning !! This is a work-in-progress and is not finished yet.
-
 A utility for browsing the [EMF Camp](https://www.emfcamp.org/) schedule and camp map (if I get around to implementing the map) entirely offline.
 
 ## Platforms
@@ -9,6 +7,7 @@ A utility for browsing the [EMF Camp](https://www.emfcamp.org/) schedule and cam
 The primary supported platforms are:
 - ZX Spectrum 48k or compatible
 - Linux (most modern versions of)
+- MS-DOS (with or without terminal emulation)
 
 ## Build dependencies
 
@@ -21,6 +20,10 @@ Linux:
 
     nothing that isn't in build-essential (or your distro's equivalent package)
 
+MS DOS:
+
+    Watcom C compiler (Open Watcom V2, run ./get_watcom to fetch a copy to the working directory)
+
 ## Building
 
 ZX Spectrum:
@@ -30,3 +33,9 @@ ZX Spectrum:
 Linux:
 
     make emfinfo_linux
+
+
+MS DOS:
+
+    make emfinfo_msdos.exe
+    make emfinfo_msdos_textonly.exe # does not depend on terminal emulation
