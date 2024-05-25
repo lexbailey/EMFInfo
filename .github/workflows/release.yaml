@@ -27,3 +27,4 @@ jobs:
           artifacts: "release_archives/*"
           tag: Release
           commit: ${{ github.sha }}
+          allowUpdates: true

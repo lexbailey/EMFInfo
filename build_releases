@@ -28,7 +28,7 @@ default_data = [
 
 packages = {
     "zxspectrum":[
-        ("emfinfo_zxspec48.tap", "emfinfo.tap"),
+        ("emfinfo_zxspec48.tap", "zxspectrum.tap"),
     ],
     "linux":[
         *default_data,
