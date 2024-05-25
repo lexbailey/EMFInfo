@@ -20,11 +20,24 @@ jobs:
             sudo pip3 install -r requirements.txt
       - name: Build release files
         run: ./build_releases
-      - name: Save release files
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: EMFInfo
-          path: releases/*
+          name: EMFInfo_linux
+          path: releases/linux
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EMFInfo_zxspectrum
+          path: releases/zxspectrum
+          if-no-files-found: error
+          retention-days: 90
+          overwrite: true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EMFInfo_msdos
+          path: releases/msdos
           if-no-files-found: error
           retention-days: 90
           overwrite: true
