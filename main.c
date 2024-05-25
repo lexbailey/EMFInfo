@@ -733,7 +733,12 @@ uifunc timetable_list(char changed, char key){
         //n_pages = div10(num_events)+1;
         clear(); bgblack();
         curpos(0,0);
-        int maxchars = SCREEN_WIDTH - 2;
+        #ifdef LINEAR_TEXT
+            // A hack because the real fix is annoying
+            int maxchars = SCREEN_WIDTH - 3;
+        #else
+            int maxchars = SCREEN_WIDTH - 2;
+        #endif
         text(FG_WHITE "EMF Timetable (");
         if (filt_day == 0xff){
             text("all days");
@@ -784,7 +789,7 @@ uifunc timetable_list(char changed, char key){
             #else
                 text("#" FG_YELLOW);
             #endif
-             bgblack();
+            bgblack();
             dc_truncated_text(maxchars, ev.title);
             NEXTLINE
             curpos(0,line+1);
