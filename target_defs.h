@@ -227,8 +227,7 @@ things that need to be defined per target...
     // This is the ISO-8859-1 encoding of the pound symbol
     // it's not actually printed, only used as a placeholder value for identfying the pound in the custom encoding, so it's fine that this is not utf-8
     #define GBP_CHAR (0xa3)
-    // This _is_ utf-8 tho
-    #define GBP "£"
+    #define GBP "\x9c"
     #define LOADMODE LM_MALLOC
     #define FILE_MAP "map.png"
     #define FILE_EVENTS "evMSD.bin"
@@ -300,7 +299,7 @@ things that need to be defined per target...
     // it's not actually printed, only used as a placeholder value for identfying the pound in the custom encoding, so it's fine that this is not utf-8
     #define GBP_CHAR (0xa3)
     // This _is_ utf-8 tho
-    #define GBP "£"
+    #define GBP "\x9c"
     #define LOADMODE LM_MALLOC
     #define FILE_MAP "map.png"
     #define FILE_EVENTS "evMSD.bin"
