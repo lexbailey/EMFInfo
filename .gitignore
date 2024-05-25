@@ -19,3 +19,4 @@ mapdata.h
 *.exe
 watcom
 releases
+release_archives
