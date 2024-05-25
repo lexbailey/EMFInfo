@@ -204,14 +204,15 @@ things that need to be defined per target...
     #define BACKSPACE_KEY (8)
     #define MAX_PRINTABLE (0x7F)
     #define BACKSPACE_NAME "Backspace"
-    #define BOXDRAW_BR "-"
-    #define BOXDRAW_BL "-"
-    #define BOXDRAW_TR "-"
-    #define BOXDRAW_TL "-"
-    #define BOXDRAW_L "|"
-    #define BOXDRAW_R "|"
-    #define BOXDRAW_B "-"
-    #define BOXDRAW_T "-"
+    // Code page 437
+    #define BOXDRAW_BR "\xDA"
+    #define BOXDRAW_BL "\xBF"
+    #define BOXDRAW_TR "\xC0"
+    #define BOXDRAW_TL "\xD9"
+    #define BOXDRAW_L "\xB3"
+    #define BOXDRAW_R "\xB3"
+    #define BOXDRAW_B "\xC4"
+    #define BOXDRAW_T "\xC4"
     #include <string.h>
     #include <stdio.h>
     #include <stdlib.h>
