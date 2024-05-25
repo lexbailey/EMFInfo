@@ -28,3 +28,5 @@ jobs:
           tag: Release
           commit: ${{ github.sha }}
           allowUpdates: true
+          removeArtifacts: true
+          makeLatest: true
