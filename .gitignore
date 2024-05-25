@@ -17,3 +17,5 @@ sdcc-4.4.0/
 *.zx0
 mapdata.h
 *.exe
+watcom
+releases

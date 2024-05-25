@@ -1,4 +1,5 @@
 #!/usr/bin/env xonsh
+import glob
 
 $RAISE_SUBPROC_ERROR = True
 
@@ -13,4 +14,42 @@ for target in [
     ]:
     $name = f"emfinfo_{target}"
     make $name
-    cp $name releases/$name
+
+def descs(glob_):
+    files = glob.glob(glob_)
+    return files
+
+default_data = [
+    "strings_default.bin",
+    "c_lut_default.bin",
+    "evlist_default.bin",
+]
+
+packages = {
+    "zxspectrum":[
+        ("emfinfo_zxspec48.tap", "emfinfo.tap"),
+    ],
+    "linux":[
+        *default_data,
+        *descs("descriptions?.bin"),
+    ],
+    "ms-dos":[
+        ("emfinfo_msdos.exe", "emfi.exe"),
+        ("emfinfo_msdos_textonly.exe", "emfi_t.exe"),
+        "evMSD.bin",
+        "clMSD.bin",
+        "sMSD.bin",
+        *descs("dMSD?.bin"),
+        ("readme_msdos.txt", "readme.txt"),
+    ],
+}
+
+for package, filelist in packages.items():
+    mkdir -p releases/@(package)
+    for to_copy in filelist:
+        if type(to_copy) == str:
+            cp @(to_copy) releases/@(package)/@(to_copy)
+        else:
+            cp @(to_copy[0]) releases/@(package)/@(to_copy[1])
+
+
