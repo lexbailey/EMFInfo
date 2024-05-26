@@ -56,6 +56,7 @@ for package, filelist in packages.items():
     if len(filelist) > 1:
         zip -r release_archives/EMFInfo_@(package).zip releases/@(package)
     else:
-        cp releases/@(package)/* release_archives/.
+        thefile = filelist[0][1]
+        cp releases/@(package)/@(thefile) release_archives/EMFInfo_@(thefile)
 
 zip -r release_archives/EMFInfo_all_platforms.zip releases
