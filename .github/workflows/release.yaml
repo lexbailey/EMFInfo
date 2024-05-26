@@ -26,4 +26,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: release_archives/*
+          tag_name: Release
 
