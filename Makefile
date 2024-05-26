@@ -4,7 +4,7 @@ ZX0=./ZX0/src/zx0
 
 PROG_START=0x5e88
 
-main_sources=main.c bitstream_parse.c file_io.c image_render.c intmath.c mapdata.h target_defs.h target_vars.c text_render.c
+main_sources=main.c bitstream_parse.c file_io.c image_render.c intmath.c map_headers target_defs.h target_vars.c text_render.c
 
 default: all
 
@@ -69,9 +69,10 @@ main.zxspec48.bin.tap: main.zxspec48.bin bin2tap/bin2tap
 mapzx.bin: map/map_full.scr.zx0 map/map_north.scr.zx0 map/map_south.scr.zx0
 	cat $^ > $@
 
-mapdata.h: mapzx.bin gen_map_header
+mapdata.h mapsix.h: map_headers
+.INTERMEDIATE: map_headers
+map_headers: mapzx.bin gen_map_header
 	./gen_map_header
-
 
 descriptions.tap: evbuild_intermediate_zxspec48
 	rm -f descriptions.tap
@@ -84,7 +85,10 @@ emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap mapzx.bin.tap evlist.bin
 %.wav: %.tap
 	tape2wav $< $@
 
-emfinfo_linux: $(main_sources) evbuild_intermediate_pc_linux
+mapdata_six: map/map_full.six map/map_zoom_north.six map/map_zoom_south.six
+	cat $^ > $@
+
+emfinfo_linux: $(main_sources) evbuild_intermediate_pc_linux mapdata_six
 	cc -gdwarf -DTARGET_PC_LINUX -c main.c -o main.o
 	cc -gdwarf -o $@ main.o
 

@@ -116,7 +116,7 @@ void text_len(char *t, int l){
         text_zxspec48(t, l);
     #else
         for (int i = 0; i< l; i++){
-            printf("%c", t[i]);
+            putc(t[i], stdout);
         }
     #endif 
 }

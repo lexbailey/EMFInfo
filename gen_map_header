@@ -4,3 +4,10 @@ NORTH=`wc -c < map/map_north.scr.zx0`
 echo "#define MAP_BASE ((char *)&end_of_program)" > mapdata.h
 echo "#define MAP_NORTH_BASE ((char *)(MAP_BASE+$FULL))" >> mapdata.h
 echo "#define MAP_SOUTH_BASE ((char *)(MAP_BASE+$FULL+$NORTH))" >> mapdata.h
+
+FULL=`wc -c < map/map_full.six`
+NORTH=`wc -c < map/map_zoom_north.six`
+SOUTH=`wc -c < map/map_zoom_south.six`
+echo "#define MAP_LEN_FULL ($FULL)" > mapsix.h
+echo "#define MAP_LEN_NORTH ($NORTH)" >> mapsix.h
+echo "#define MAP_LEN_SOUTH ($SOUTH)" >> mapsix.h

@@ -25,6 +25,7 @@ size_t descs_len = 0;
 uint8_t *map_full;
 uint8_t *map_north;
 uint8_t *map_south;
+#include "custom_loader_splitmap.c"
 #endif
 
 #if defined(TARGET_PC_MSDOS) || defined(TARGET_PC_MSDOS_TEXT)

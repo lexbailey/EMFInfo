@@ -83,6 +83,10 @@ things that need to be defined per target...
     #pragma disable_warning 85
     extern void *end_of_program;
     #include "mapdata.h"
+    // map file lengths are implied in zxspectrum build
+    #define MAP_LEN_FULL (0)
+    #define MAP_LEN_NORTH (0)
+    #define MAP_LEN_SOUTH (0)
     #define EVENTS_BASE (map_base + map_len)
     #define C_LUT_BASE (events_base + events_len)
     #define STRINGS_BASE (c_lut_base + c_lut_len)
@@ -149,9 +153,11 @@ things that need to be defined per target...
     #include <signal.h>
     #include <stdint.h>
     #include <sys/ioctl.h>
+    #include "mapsix.h"
     #define MAP_BASE (map_full)
     #define MAP_NORTH_BASE (map_north)
     #define MAP_SOUTH_BASE (map_south)
+    #define MAP_IS_SIXEL
     #define MAIN_CAN_RETURN
     #define COPYRIGHT "\xc2\xa9"
     // This is the ISO-8859-1 encoding of the pound symbol
@@ -160,7 +166,7 @@ things that need to be defined per target...
     // This _is_ utf-8 tho
     #define GBP "\xc2\xa3"
     #define LOADMODE LM_MALLOC
-    #define FILE_MAP "map.png"
+    #define FILE_MAP "mapdata_six"
     #define FILE_EVENTS "evlist_default.bin"
     #define FILE_C_LUT "c_lut_default.bin"
     #define FILE_STRINGS "strings_default.bin"
@@ -223,6 +229,11 @@ things that need to be defined per target...
     #define MAP_BASE (map_full)
     #define MAP_NORTH_BASE (map_north)
     #define MAP_SOUTH_BASE (map_south)
+
+    #define MAP_LEN_FULL (0)
+    #define MAP_LEN_NORTH (0)
+    #define MAP_LEN_SOUTH (0)
+
     #define MAIN_CAN_RETURN
     #define COPYRIGHT "(C)"
     // This is the ISO-8859-1 encoding of the pound symbol
@@ -294,6 +305,11 @@ things that need to be defined per target...
     #define MAP_BASE (map_full)
     #define MAP_NORTH_BASE (map_north)
     #define MAP_SOUTH_BASE (map_south)
+
+    #define MAP_LEN_FULL (0)
+    #define MAP_LEN_NORTH (0)
+    #define MAP_LEN_SOUTH (0)
+
     #define MAIN_CAN_RETURN
     #define COPYRIGHT "(C)"
     // This is the ISO-8859-1 encoding of the pound symbol

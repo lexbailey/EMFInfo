@@ -83,6 +83,7 @@ typedef struct {
     char *descr;
 } event_t;
 
+#include "file_io.h"
 #include "target_vars.c"
 unsigned int num_events = 0;
 unsigned int ev_size = 0;
@@ -992,7 +993,15 @@ uifunc map(char changed, char key){
             NEXTLINE
         }
         else{
-            show_image(MAP_BASE);
+            #ifdef MAP_IS_SIXEL
+                clear();
+                curpos(2,6);
+                text("Map rendering requires a");
+                curpos(2,7);
+                text("terminal with sixel support");
+            #endif
+            curpos(0,0);
+            show_image(MAP_BASE, MAP_LEN_FULL);
             curpos(0,0);
             text("EMF Map");
             NEXTLINE
@@ -1017,7 +1026,11 @@ uifunc map(char changed, char key){
 
 uifunc mapnorth(char changed, char key){
     if (changed){
-        show_image(MAP_NORTH_BASE);
+        #ifdef MAP_IS_SIXEL
+           clear();
+        #endif
+        curpos(0,0);
+        show_image(MAP_NORTH_BASE, MAP_LEN_NORTH);
     }
     if (key == 'n'){ return (uifunc)mapnorth; }
     if (key == 's'){ return (uifunc)mapsouth; }
@@ -1027,7 +1040,11 @@ uifunc mapnorth(char changed, char key){
 
 uifunc mapsouth(char changed, char key){
     if (changed){
-        show_image(MAP_SOUTH_BASE);
+        #ifdef MAP_IS_SIXEL
+           clear();
+        #endif
+        curpos(0,0);
+        show_image(MAP_SOUTH_BASE, MAP_LEN_SOUTH);
     }
     if (key == 'n'){ return (uifunc)mapnorth; }
     if (key == 's'){ return (uifunc)mapsouth; }
@@ -1162,6 +1179,7 @@ uifunc modules(char changed, char key){
 int main(){
     init_text();
     clear();
+    bgblack();
     #ifdef ATEXIT
         atexit(ATEXIT);
     #endif
