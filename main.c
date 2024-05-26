@@ -595,6 +595,7 @@ void apply_filters(){
     curpos(3,11);
     text("Filtering, please wait..."); // may take a while
     NEXTLINE
+    FLUSH
     filt_event_count = 0;
     signed char ds = filt_day;
     ds -= day0_index;

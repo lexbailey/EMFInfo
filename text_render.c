@@ -221,6 +221,12 @@ char get_key_press(){
     #endif
 }
 
+#if defined(TARGET_PC_LINUX) || defined(TARGET_PC_MSDOS) || defined(TARGET_PC_MSDOS_TEXT)
+    #define FLUSH fflush(stdout);
+#else
+    #define FLUSH
+#endif
+
 #ifdef TARGET_PC_LINUX
     void cleanup(){
         printf("\033[?25h");
