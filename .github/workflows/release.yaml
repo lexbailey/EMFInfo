@@ -28,6 +28,7 @@ jobs:
       - uses: dev-drprasad/delete-tag-and-release@v1.1
         with:
           tag_name: Release
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: rickstaa/action-create-tag@v1
         with:
