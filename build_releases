@@ -54,7 +54,7 @@ for package, filelist in packages.items():
             cp @(to_copy[0]) releases/@(package)/@(to_copy[1])
 
     if len(filelist) > 1:
-        zip release_archives/@(package).zip releases/@(package)
+        zip -r release_archives/@(package).zip releases/@(package)
     else:
         cp releases/@(package)/* release_archives/.
 
