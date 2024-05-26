@@ -22,11 +22,8 @@ jobs:
             sudo pip3 install -r requirements.txt
       - name: Build release files
         run: ./build_releases
-      - uses: ncipollo/release-action@v1.14.0
+      - name: Release
+        uses: softprops/action-gh-release@v2
         with:
-          artifacts: "release_archives/*"
-          tag: Release
-          commit: ${{ github.sha }}
-          allowUpdates: true
-          removeArtifacts: true
-          makeLatest: "true"
+          files: release_archives/*
+
