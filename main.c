@@ -559,13 +559,12 @@ uifunc event_detail(char changed, char key){
                 bgblack();
                 text(" ");
             }
-            dc_truncated_text(255, ev.descr);
+            dc_truncated_text(255, ev.descr); // TODO go beyond 255 chars
             NEXTLINE
         }
         else{
-            text("(description not loaded" NEWLINE FG_GREEN "L" FG_WHITE " - load descriptions ");
+            text("!!description not loaded!!" NEWLINE FG_GREEN "L" FG_WHITE " - load descriptions ");
             num_text(ev.descr_page);
-            text(")");
             NEXTLINE
             if (ev.has_cw){
                 curpos(0,10);
@@ -1106,17 +1105,14 @@ uifunc descinput(char changed, char key){
     if (changed) {
         clear();
         curpos(0,0);
-        text("Type description module number. Press");
-        NEXTLINE
-        curpos(0,1);
-        text("enter. " BACKSPACE_NAME " to delete or exit.");
+        text("Type description module number" NEWLINE "then press enter. Press " BACKSPACE_NAME NEWLINE " to delete or exit.");
         NEXTLINE
         input_box();
         input_cur = inputtext;
         *input_cur = '\0';
     }
     if (key >= '0' && key <= '9'){
-        if (input_cur > (inputtext + 3)){
+        if (input_cur >= (inputtext + 3)){
             // end of field
         }
         else{
