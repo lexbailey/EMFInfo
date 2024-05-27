@@ -180,6 +180,7 @@ things that need to be defined per target...
     #define INTERRUPT interrupt
     #define NEWLINE "\n"
     #define AUTOLOAD_DESC0
+    #define AUTOLOAD_MISSING_DESC
 
     #define SCREEN_WIDTH (get_term_width())
 
@@ -250,10 +251,11 @@ things that need to be defined per target...
     #define FILE_STRINGS "sMSD.bin"
     #define FILE_DESCS_PREFIX "dMSD"
     #define FILE_DESCS_SUFFIX ".bin"
-    #define FNAME_MAXLEN (10)
+    #define FNAME_MAXLEN (12)
     #define DESCR_BITS (14)
     #define NEWLINE "\n"
     #define AUTOLOAD_DESC0
+    #define AUTOLOAD_MISSING_DESC
 
     #define SCREEN_WIDTH (get_term_width())
 

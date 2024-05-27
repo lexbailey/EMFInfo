@@ -145,6 +145,7 @@ Other platforms may use other types in place of size_t.
     }
 
     int load_data(void* p, size_t *len, char *fname){
+        printf("%s\n", fname);
         FILE *f = fopen(fname, "rb");
         if (f == NULL){
             return 0;

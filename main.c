@@ -498,6 +498,12 @@ int ev_id = 0;
 uifunc event_detail(char changed, char key){
     event_t ev;
     ev = get_event(ev_id); // can't do this on the same as the above line, SDCC bug #3121
+    // On some platforms, the description data can be loaded automatically
+    #ifdef AUTOLOAD_MISSING_DESC
+        if (descs_loaded != ev.descr_page){
+            load_descs(ev.descr_page);
+        }
+    #endif
     if (changed) {
         clear();
         curpos(0,0);
@@ -546,6 +552,7 @@ uifunc event_detail(char changed, char key){
         }
 
         curpos(0,8);
+
         if (descs_loaded == ev.descr_page){
             if (ev.has_cw){
                 text(BG_RED "Content Warning:");

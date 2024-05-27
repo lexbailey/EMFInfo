@@ -10,9 +10,11 @@ import subprocess
 
 p = argparse.ArgumentParser()
 p.add_argument("target", choices=['PC_LINUX', 'ZXSPEC48', 'PC_MSDOS'])
+p.add_argument("--pass", type=int, default=1)
 args = p.parse_args()
 
 target = args.target
+pass_ = vars(args)['pass'] # is there really no better way to get an argument called 'pass'?
 
 pound_placeholder = 0xa3
 evlist_name = "evlist_default.bin"
@@ -25,7 +27,10 @@ if target == 'ZXSPEC48':
     pound_placeholder = 0x60
     lutname = 'c_lut.bin'
     desc_prefix = 'desc'
-    max_part_size = int(subprocess.check_output(['./calc_max_ram']).strip(), 16)
+    if pass_ == 2:
+        max_part_size = int(subprocess.check_output(['./calc_max_ram']).strip(), 16)
+    else:
+        max_part_size = 2**14
     descr_bits = 14
     evlist_name = "evlist.bin"
     strings_name = "strngs.bin"
@@ -34,7 +39,7 @@ if target == 'PC_MSDOS':
     evlist_name = "evMSD.bin"
     strings_name = "sMSD.bin"
     desc_prefix = 'dMSD'
-    max_part_size = 0x3000 # TODO calculate this like the spectrum version does
+    max_part_size = 0x1000 # TODO calculate this like the spectrum version does
     descr_bits = 14
 
 strings = [
@@ -297,3 +302,6 @@ for i, ss in descr_str.items():
     with open(f"{desc_prefix}{i}.bin", "wb+") as f:
         for (p,s) in ss:
             f.write(s)
+
+if target=='ZXSPEC48' and pass_ == 1:
+    subprocess.check_call(sys.argv + ['--pass=2'])
