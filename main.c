@@ -8,7 +8,7 @@
 #define EVTYPE_WORKSHOP (2)
 #define EVTYPE_YOUTHWORKSHOP (3)
 #define EV_HEADER_LEN (6)
-#define DECOMP_STR_MAX (500)
+#define DECOMP_STR_MAX (100)
 
 #ifdef LINEAR_TEXT
     #define NEXTLINE text("\n");
@@ -203,13 +203,13 @@ void bgblack(){
     }
 #endif
 
-char last_string[DECOMP_STR_MAX];
+char last_string[DECOMP_STR_MAX+1];
 
-void decompress(char *s){
+unsigned char decompress_continue(){
     char *d = last_string;
     int i = 0;
     unsigned char c = 0;
-    BITSTREAM_INIT(s)
+    unsigned char done = 0;
     while (i < DECOMP_STR_MAX-2){
         unsigned char index = 0;
         while (CBITS(1)){
@@ -226,6 +226,7 @@ void decompress(char *s){
         }
         c = c_lut_base[index];
         if (c == '\0'){
+            done = 1;
             break;
         }
         // pound sign is special
@@ -246,6 +247,12 @@ void decompress(char *s){
         i ++;
     }
     *d = '\0';
+    return done;
+}
+
+unsigned char decompress(char *s){
+    BITSTREAM_INIT(s)
+    return decompress_continue();
 }
 
 void dc_text(char *s){
@@ -253,9 +260,16 @@ void dc_text(char *s){
     text(last_string);
 }
 
-void dc_truncated_text(unsigned char limit, char *s){
-    decompress(s);
+unsigned char dc_truncated_text(unsigned char limit, char *s){
+    unsigned char done = decompress(s);
     truncated_text(limit, last_string);
+    return done;
+}
+
+unsigned char dc_truncated_text_cont(unsigned char limit){
+    unsigned char done = decompress_continue();
+    truncated_text(limit, last_string);
+    return done;
 }
 
 event_t get_event(unsigned int index){
@@ -559,7 +573,11 @@ uifunc event_detail(char changed, char key){
                 bgblack();
                 text(" ");
             }
-            dc_truncated_text(255, ev.descr); // TODO go beyond 255 chars
+            unsigned char done = dc_truncated_text(100, ev.descr);
+            while (!done){
+                done = dc_truncated_text_cont(100);
+            }
+
             NEXTLINE
         }
         else{
