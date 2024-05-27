@@ -110,6 +110,7 @@ things that need to be defined per target...
     #define NEWLINE "\r"
 
     #define SCREEN_WIDTH (32)
+    #define SCREEN_HEIGHT (22) // would be 24, but the last line is fucky
 
     #define FG_BLACK_LEN (2)
     #define BG_BLACK_LEN (2)
@@ -182,7 +183,8 @@ things that need to be defined per target...
     #define AUTOLOAD_DESC0
     #define AUTOLOAD_MISSING_DESC
 
-    #define SCREEN_WIDTH (get_term_width())
+    #define SCREEN_WIDTH (__termw)
+    #define SCREEN_HEIGHT (__termh)
 
     #define FG_BLACK_LEN (5)
     #define BG_BLACK_LEN (5)
@@ -257,7 +259,8 @@ things that need to be defined per target...
     #define AUTOLOAD_DESC0
     #define AUTOLOAD_MISSING_DESC
 
-    #define SCREEN_WIDTH (get_term_width())
+    #define SCREEN_WIDTH (__termw)
+    #define SCREEN_HEIGHT (24)
 
     #ifdef TARGET_PC_MSDOS
         #define FG_BLACK_LEN (5)

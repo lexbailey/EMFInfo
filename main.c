@@ -266,6 +266,18 @@ unsigned char dc_truncated_text(unsigned char limit, char *s){
     return done;
 }
 
+unsigned char dc_text_nooverflow(char *s){
+    unsigned char done = decompress(s);
+    done = done | text_nooverflow(last_string);
+    return done;
+}
+
+unsigned char dc_text_nooverflow_cont(){
+    unsigned char done = decompress_continue();
+    done = done | text_nooverflow(last_string);
+    return done;
+}
+
 unsigned char dc_truncated_text_cont(unsigned char limit){
     unsigned char done = decompress_continue();
     truncated_text(limit, last_string);
@@ -573,9 +585,9 @@ uifunc event_detail(char changed, char key){
                 bgblack();
                 text(" ");
             }
-            unsigned char done = dc_truncated_text(100, ev.descr);
+            unsigned char done = dc_text_nooverflow(ev.descr);
             while (!done){
-                done = dc_truncated_text_cont(100);
+                done = dc_text_nooverflow_cont();
             }
 
             NEXTLINE

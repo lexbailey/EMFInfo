@@ -1,3 +1,13 @@
+
+#ifdef TARGET_PC_LINUX
+    unsigned char __termw;
+    unsigned char __termh;
+#endif
+
+#if defined(TARGET_PC_MSDOS) || defined(TARGET_PC_MSDOS_TEXT)
+    unsigned char __termw;
+#endif
+
 #ifdef TARGET_ZXSPEC48
 int strlen(char *t){
     int result = 0;
@@ -40,7 +50,7 @@ void curpos(char x, char y){
 
 char get_cur_x(){
     #ifdef TARGET_ZXSPEC48
-        return *((char *)0x5c88);
+        return 33-*((char *)0x5c88);
     #else
         return __cur_x;
     #endif
@@ -48,9 +58,9 @@ char get_cur_x(){
 
 char get_cur_y(){
     #ifdef TARGET_ZXSPEC48
-        return *((char *)0x5c89);
+        return 24-*((char *)0x5c89);
     #else
-        return __cur_x;
+        return __cur_y;
     #endif
 }
 
@@ -95,6 +105,26 @@ void init_text(){
         tcsetattr(fileno(stdin), TCSANOW, &t);
         printf("\033[?1049h");
         printf("\033[?25l");
+        struct winsize sz;
+        ioctl(0, TIOCGWINSZ, &sz);
+        __termw = sz.ws_col;
+        __termh = sz.ws_row;
+    #endif
+
+    #if defined(TARGET_PC_MSDOS) || defined(TARGET_PC_MSDOS_TEXT)
+        const unsigned char known_mode_widths[] = {
+            40,40,80,80,40,40,80,80,132
+        };
+        union REGS r;
+        r.h.ah = 0xf;
+        int86(0x10, &r, &r);
+        if (r.h.al > 8) {
+             __termw = 40;
+        }
+        else{
+            __termw = known_mode_widths[r.h.al];
+        }
+
     #endif
 }
 
@@ -116,17 +146,36 @@ void text_len(char *t, int l){
         text_zxspec48(t, l);
     #else
         for (int i = 0; i< l; i++){
-            putc(t[i], stdout);
+            char c = t[i];
+            if (c == '\n'){
+                __cur_y += 1;
+                __cur_x = 0; // This is technically wrong but it doesn't matter
+            }
+            else{
+                __cur_x += 1; // This is also technically wrong, but it still doesn't actually matter
+                if (__cur_x >= SCREEN_WIDTH){
+                    // This one is _certainly_ wrong, and yet it doesn't matter
+                    __cur_y += 1;
+                    __cur_x = 0;
+                    // "BUT, LEX!", I hear you whisper softly, "why doesn't it matter?"
+                    // well, because I only ever depend on these values being correct at times
+                    // when I know that the above "wrong" (approximate) logic is correct.
+                    // I only need this when I'm _not_ doing any fancy escape sequences since the last
+                    // absolute positioning of the cursor
+                }
+            }
+            putc(c, stdout);
         }
     #endif 
 }
 
 void text(char *t){
+    int l = strlen(t);
     #ifdef TARGET_ZXSPEC48
-        int l = strlen(t);
         text_zxspec48(t, l);
     #else
-        printf("%s", t);
+        //printf("%s", t);
+        text_len(t, l);
     #endif
 }
 
@@ -195,6 +244,19 @@ void truncated_text(char max, char* s){
     }
 }
 
+unsigned char text_nooverflow(char* s){
+    char cc[2];
+    cc[1] = '\0';
+    do{
+        if (get_cur_y() >= SCREEN_HEIGHT-1){
+            return 1;
+        }
+        cc[0] = *s++;
+        text_len(cc,1);
+    } while (*s != '\0');
+    return 0;
+}
+
 void noscroll(){
     // Makes sure that the program will not pause if text is written past the end of the screen.
     #ifdef TARGET_ZXSPEC48
@@ -240,24 +302,3 @@ char get_key_press(){
     }
 #endif
 
-#ifdef TARGET_PC_LINUX
-    int get_term_width(){
-        struct winsize sz;
-        ioctl(0, TIOCGWINSZ, &sz);
-        return sz.ws_col;
-    }
-#endif
-
-#if defined(TARGET_PC_MSDOS) || defined(TARGET_PC_MSDOS_TEXT)
-    const int known_mode_widths[] = {
-        40,40,80,80,40,40,80,80,132
-    };
-
-    int get_term_width(){
-        union REGS r;
-        r.h.ah = 0xf;
-        int86(0x10, &r, &r);
-        if (r.h.al > 8) { return 40; }
-        return known_mode_widths[r.h.al];
-    }
-#endif

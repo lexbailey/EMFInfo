@@ -76,8 +76,8 @@ map_headers: mapzx.bin gen_map_header
 
 descriptions.tap: evbuild_intermediate_zxspec48
 	rm -f descriptions.tap
-	$(MAKE) $(patsubst %.bin,%.bin.tap,$(shell echo desc*.bin | tr ' ' '\n' | grep \d | sort -V | tr '\n' ' ' ))
-	cat $(shell echo desc*.bin.tap | tr ' ' '\n' | grep \d | sort -V | tr '\n' ' ' ) > $@
+	$(MAKE) $(patsubst %.bin,%.bin.tap,$(shell echo desc*.bin | tr ' ' '\n' | grep 'desc[0-9]' | sort -V | tr '\n' ' ' ))
+	cat $(shell echo desc*.bin.tap | tr ' ' '\n' | grep 'desc[0-9]' | sort -V | tr '\n' ' ' ) > $@
 
 emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap mapzx.bin.tap evlist.bin.tap c_lut.bin.tap strngs.bin.tap descriptions.tap
 	cat $^ > $@
