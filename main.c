@@ -316,7 +316,7 @@ unsigned char get_event_type(unsigned int index){
 }
 
 // finds the filter bit for the given event index
-unsigned char *filt_ptr(unsigned int index){ return events_base + 8 + mul(index, ev_size); }
+unsigned char *filt_ptr(unsigned int index){ return events_base + 9 + mul(index, ev_size); }
 // returns a negative number if the event is filtered out, otherwise returns a positive number
 signed char filt_get(unsigned int index){ return *filt_ptr(index); }
 // sets the filter bit (to filter out the event)
@@ -493,7 +493,7 @@ void time_text(unsigned int time){
 }
 
 void duration_text(unsigned char dur){
-    char hr = 0;
+    unsigned char hr = 0;
     while (dur >= 60){
         dur -= 60;
         hr += 1;
@@ -502,7 +502,7 @@ void duration_text(unsigned char dur){
     text("hrs");
     if (dur > 0){
         text(",");
-        num_text((char)dur);
+        num_text(dur);
         text("mins");
     }
 }

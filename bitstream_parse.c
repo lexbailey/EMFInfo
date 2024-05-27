@@ -1,4 +1,4 @@
-char *bitstream_ptr;
+unsigned char *bitstream_ptr;
 signed char bitstream_pos;
 
 #ifdef TARGET_ZXSPEC48
@@ -29,11 +29,11 @@ BITSTREAM_OUT_TYPE bitstream_get(char bits){
 #define BITSTREAM_INIT(p) bitstream_ptr=p;bitstream_pos=7;
 
 #ifdef TARGET_ZXSPEC48
-    #define CBITS(n) ((char)(bitstream_get(n)))
+    #define CBITS(n) ((unsigned char)(bitstream_get(n)))
     #define PBITS(n) ((char*)bitstream_get(n))
     #define IBITS(n) ((unsigned int)bitstream_get(n))
 #else
-    #define CBITS(n) ((char)(bitstream_get(n)))
+    #define CBITS(n) ((unsigned char)(bitstream_get(n)))
     #define PBITS(n) ((char *)bitstream_get(n))
     #define IBITS(n) (bitstream_get(n))
 #endif
