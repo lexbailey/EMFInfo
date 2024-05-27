@@ -145,7 +145,7 @@ void num_text(int n){
         "ld hl, #_n2\n\t"
         // First byte is 0 to indicate integer number
         "ld (hl), #0\n\t"
-        // Next byte is 0 to indicate positive number TODO does this need to support negatives?
+        // Next byte is 0 to indicate positive number
         "inc hl\n\t"
         "ld (hl), #0\n\t"
         // Next two bytes are the number, from de
