@@ -8,7 +8,7 @@ signed char bitstream_pos;
     #define BITSTREAM_OUT_TYPE long unsigned int
 #endif
 #if defined(TARGET_PC_MSDOS) || defined(TARGET_PC_MSDOS_TEXT)
-    #define BITSTREAM_OUT_TYPE long unsigned int
+    #define BITSTREAM_OUT_TYPE uint16_t
 #endif
 
 BITSTREAM_OUT_TYPE bitstream_get(char bits){

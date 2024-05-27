@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+s = os.path.getsize
+start=0x5e88
+prog = s('main.zxspec48.bin')
+map_ = s('mapzx.bin')
+c_lut = s('c_lut.bin')
+evlist = s('evlist.bin')
+strings = s('strngs.bin')
+
+end = start + prog + map_ + c_lut + evlist + strings
+
+max_ = 0xfe00
+
+result = hex(max_ - end);
+print(f'fully loaded program ends at {hex(end)}. max is {hex(max_)} so the max size of a description block is {result}', file=sys.stderr)
+print(result)

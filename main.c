@@ -61,7 +61,7 @@ char *filt_text = 0;
 
 unsigned char n_desc_modules = 0;
 
-unsigned char descs_loaded[10] = {0,0,0,0,0,0,0,0,0};
+unsigned char descs_loaded = 255;
 
 unsigned char map_loaded = 0;
 unsigned char evs_loaded = 0;
@@ -170,11 +170,22 @@ void bgblack(){
 
 #ifndef CUSTOM_LOAD_DESCS
     void load_descs(unsigned char n){
-        static char desc_file_name[] = FILE_DESCS;
-        desc_file_name[FILE_DESCS_ID_CHAR] = '0' + n;
-        for (unsigned char i = 0; i<=8; i++){
-            descs_loaded[i] = 0;
-        }
+        static char desc_file_name[FNAME_MAXLEN+1];
+        #ifdef NO_SPRINTF
+            char *desc_pos = desc_file_name;
+            for (char *x = FILE_DESCS_PREFIX; *x != '\0'; *desc_pos++ = *x++){}
+            if (n >= 200) {*desc_pos++='2';n-=200;}
+            if (n >= 100) {*desc_pos++='1';n-=100;}
+            char tens = '0';
+            while (n >= 10) {tens += 1; n -= 10;}
+            if (tens != '0') {*desc_pos++=tens;}
+            *desc_pos++ = '0'+n;
+            for (char *x = FILE_DESCS_SUFFIX; *x != '\0'; *desc_pos++ = *x++){}
+            *desc_pos = '\0';
+        #else
+            snprintf(desc_file_name, FNAME_MAXLEN, FILE_DESCS_PREFIX "%d" FILE_DESCS_SUFFIX, n);
+        #endif
+        descs_loaded = 255;
         #if LOADMODE == LM_MALLOC
             if (descs_base != NULL){
                 free(descs_base);
@@ -186,7 +197,9 @@ void bgblack(){
                 descs_base = DESCS_BASE;
             #endif
         #endif
-        descs_loaded[n] = load_data(descs_base, &descs_len, desc_file_name) == 1;
+        if (load_data(descs_base, &descs_len, desc_file_name) == 1){
+            descs_loaded = n;
+        }
     }
 #endif
 
@@ -483,10 +496,10 @@ void duration_text(unsigned char dur){
 int ev_id = 0;
 
 uifunc event_detail(char changed, char key){
+    event_t ev;
+    ev = get_event(ev_id); // can't do this on the same as the above line, SDCC bug #3121
     if (changed) {
         clear();
-        event_t ev;
-        ev = get_event(ev_id); // can't do this on the same as the above line, SDCC bug #3121
         curpos(0,0);
         int maxchars = SCREEN_WIDTH;
         text(evcol[ev.type]);
@@ -533,7 +546,7 @@ uifunc event_detail(char changed, char key){
         }
 
         curpos(0,8);
-        if (descs_loaded[ev.descr_page]){
+        if (descs_loaded == ev.descr_page){
             if (ev.has_cw){
                 text(BG_RED "Content Warning:");
                 bgblack();
@@ -543,7 +556,7 @@ uifunc event_detail(char changed, char key){
             NEXTLINE
         }
         else{
-            text("(description not loaded)" NEWLINE "(load descriptions ");
+            text("(description not loaded" NEWLINE FG_GREEN "L" FG_WHITE " - load descriptions ");
             num_text(ev.descr_page);
             text(")");
             NEXTLINE
@@ -556,6 +569,12 @@ uifunc event_detail(char changed, char key){
 
     }
     if (key == 'q'){ return (uifunc)timetable_list; }
+    if (key == 'l'){
+        if (descs_loaded != ev.descr_page){
+            load_descs(ev.descr_page);
+        }
+        return event_detail(1, '\0');
+    }
     return (uifunc)event_detail;
 }
 
@@ -666,6 +685,20 @@ void apply_filters(){
 char searchterm[11];
 char *search_cur;
 
+void input_box(){
+    #ifdef LINEAR_TEXT
+    #else
+        curpos(10,11);
+        text(BOXDRAW_BR BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_BL);
+        curpos(10,13);
+        text(BOXDRAW_TR BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_TL);
+        curpos(21,12);
+        text(BOXDRAW_R);
+        curpos(10,12);
+        text(BOXDRAW_L);
+    #endif
+}
+
 uifunc search(char changed, char key){
     if (changed) {
         clear();
@@ -675,18 +708,7 @@ uifunc search(char changed, char key){
         curpos(0,1);
         text("enter. " BACKSPACE_NAME " to delete or exit.");
         NEXTLINE
-
-        #ifdef LINEAR_TEXT
-        #else
-            curpos(10,11);
-            text(BOXDRAW_BR BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_B BOXDRAW_BL);
-            curpos(10,13);
-            text(BOXDRAW_TR BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_T BOXDRAW_TL);
-            curpos(21,12);
-            text(BOXDRAW_R);
-            curpos(10,12);
-            text(BOXDRAW_L);
-        #endif
+        input_box();
         search_cur = searchterm;
         *search_cur = '\0';
     }
@@ -1069,6 +1091,63 @@ void warn_load_first(char c){
     get_key_press();
 }
 
+char inputtext[4];
+char *input_cur;
+unsigned char inputnum;
+
+uifunc descinput(char changed, char key){
+    if (changed) {
+        clear();
+        curpos(0,0);
+        text("Type description module number. Press");
+        NEXTLINE
+        curpos(0,1);
+        text("enter. " BACKSPACE_NAME " to delete or exit.");
+        NEXTLINE
+        input_box();
+        input_cur = inputtext;
+        *input_cur = '\0';
+    }
+    if (key >= '0' && key <= '9'){
+        if (input_cur > (inputtext + 3)){
+            // end of field
+        }
+        else{
+            unsigned char x = (unsigned char)(key - '0');
+            inputnum = (inputnum * 10) + x;
+            *input_cur++ = key;
+            *input_cur = '\0';
+            char new[2];
+            new[0] = key;
+            new[1] = '\0';
+            text(new);
+        }
+    }
+    if (key == BACKSPACE_KEY){
+        if (input_cur > inputtext){
+            inputnum = (inputnum - div10(*input_cur));
+            *--input_cur = '\0';
+            curpos(11,12);
+            text("          ");
+            curpos(11,12);
+            NEXTLINE
+            text(inputtext);
+        }
+        else{
+            return (uifunc)modules;
+        }
+    }
+    if (key == ENTER_KEY){
+        NEXTLINE
+        load_descs(inputnum);
+        input_cur = inputtext;
+        inputnum = 0;
+        inputtext[0] = '\0';
+        return (uifunc)modules;
+    }
+    return (uifunc)descinput;
+}
+
 uifunc modules(char changed, char key){
     if (changed){
         clear();
@@ -1097,27 +1176,26 @@ uifunc modules(char changed, char key){
         text(FG_GREEN " S" FG_WHITE " | Event text       | ");
         if (strings_loaded){text("Yes");}else{text("No");}
         NEXTLINE
-        for (int i = 0; i < n_desc_modules; i++){
-            int line = 8+i;
-            curpos(0,line);
-            text(FG_GREEN " ");
-            num_text(i);
-            text(FG_WHITE " | Descriptions ");
-            num_text(i);
-            text("   | ");
-            if (descs_loaded[i]){text("Yes");}else{text("No");}
-            NEXTLINE
-        }
-        curpos(0,8+n_desc_modules);
+        curpos(0,8);
+        text(FG_GREEN " D" FG_WHITE " | Descriptions     | ");
+        if (descs_loaded == 255){text("No");}else{num_text(descs_loaded);}
+        NEXTLINE
+        curpos(0,9);
         text("-------------------------------");
         NEXTLINE
-
-
-
+        if (n_desc_modules > 0){
+            curpos(0,10);
+            text("there's ");
+            num_text(n_desc_modules);
+            text(" description modules");
+            NEXTLINE
+            curpos(0,11);
+            text("only one can be loaded at a time");
+            NEXTLINE
+        }
         curpos(1,19);
         text("Type an ID to load a module");
         NEXTLINE
-
         curpos(1,20);
         text(FG_GREEN "Q" FG_WHITE " - Main menu");
         NEXTLINE
@@ -1159,17 +1237,22 @@ uifunc modules(char changed, char key){
             load_strings(); return modules(1,'\0');
         #endif
     }
-    if (key >= '0' && key <= '9'){
+    if (key == 'd'){
         #ifdef MODULE_ORDER
             if (!strings_loaded){
                 warn_load_first('S');
             }
-            else{
-                load_descs(key-'0'); return modules(1,'\0');
-            }
         #else
-            load_descs(key-'0'); return modules(1,'\0');
+            if (0){
+
+            }
         #endif
+        else{
+            inputnum = 0;
+            return (uifunc)descinput;
+        }
+        
+
     }
     if (key == 'q'){
         return (uifunc)menu;

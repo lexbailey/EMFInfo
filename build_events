@@ -6,6 +6,7 @@ import os
 import sys
 from unidecode import unidecode
 import argparse
+import subprocess
 
 p = argparse.ArgumentParser()
 p.add_argument("target", choices=['PC_LINUX', 'ZXSPEC48', 'PC_MSDOS'])
@@ -24,7 +25,7 @@ if target == 'ZXSPEC48':
     pound_placeholder = 0x60
     lutname = 'c_lut.bin'
     desc_prefix = 'desc'
-    max_part_size = 0x2b00
+    max_part_size = int(subprocess.check_output(['./calc_max_ram']).strip(), 16)
     descr_bits = 14
     evlist_name = "evlist.bin"
     strings_name = "strngs.bin"
@@ -33,6 +34,8 @@ if target == 'PC_MSDOS':
     evlist_name = "evMSD.bin"
     strings_name = "sMSD.bin"
     desc_prefix = 'dMSD'
+    max_part_size = 0x3000 # TODO calculate this like the spectrum version does
+    descr_bits = 14
 
 strings = [
     (0, b'\0')

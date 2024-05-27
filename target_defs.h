@@ -102,8 +102,10 @@ things that need to be defined per target...
     #define FILE_EVENTS "evlist.bin"
     #define FILE_C_LUT "c_lut.bin"
     #define FILE_STRINGS "strngs.bin"
-    #define FILE_DESCS "desc0.bin"
-    #define FILE_DESCS_ID_CHAR (4)
+    #define FILE_DESCS_PREFIX "desc"
+    #define FILE_DESCS_SUFFIX ".bin"
+    #define FNAME_MAXLEN (10)
+    #define NO_SPRINTF
     #define DESCR_BITS (14)
     #define NEWLINE "\r"
 
@@ -170,8 +172,9 @@ things that need to be defined per target...
     #define FILE_EVENTS "evlist_default.bin"
     #define FILE_C_LUT "c_lut_default.bin"
     #define FILE_STRINGS "strings_default.bin"
-    #define FILE_DESCS "descriptions0.bin"
-    #define FILE_DESCS_ID_CHAR (12)
+    #define FILE_DESCS_PREFIX "descriptions"
+    #define FILE_DESCS_SUFFIX ".bin"
+    #define FNAME_MAXLEN (18)
     #define DESCR_BITS (24)
     #define ATEXIT cleanup
     #define INTERRUPT interrupt
@@ -245,9 +248,10 @@ things that need to be defined per target...
     #define FILE_EVENTS "evMSD.bin"
     #define FILE_C_LUT "clMSD.bin"
     #define FILE_STRINGS "sMSD.bin"
-    #define FILE_DESCS "dMSD0.bin"
-    #define FILE_DESCS_ID_CHAR (4)
-    #define DESCR_BITS (24)
+    #define FILE_DESCS_PREFIX "dMSD"
+    #define FILE_DESCS_SUFFIX ".bin"
+    #define FNAME_MAXLEN (10)
+    #define DESCR_BITS (14)
     #define NEWLINE "\n"
     #define AUTOLOAD_DESC0
 
