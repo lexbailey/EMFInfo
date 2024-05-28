@@ -32,7 +32,7 @@ packages = {
     ],
     "linux":[
         *default_data,
-        *descs("descriptions?.bin"),
+        *descs("descriptions*.bin"),
         ("emfinfo_linux", "emfinfo"),
     ],
     "ms-dos":[
@@ -41,7 +41,7 @@ packages = {
         "evMSD.bin",
         "clMSD.bin",
         "sMSD.bin",
-        *descs("dMSD?.bin"),
+        *descs("dMSD*.bin"),
         ("readme_msdos.txt", "readme.txt"),
     ],
 }
