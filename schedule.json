@@ -1,0 +1,10 @@
+[
+{
+    "id": 1, "slug": "placeholder", "start_date": "2026-06-16 09:00:00", "end_date": "2026-06-19 23:59:00", "venue": "Eastnor", "latlon": [52.039918, -2.378693],
+    "title": "Schedule Placeholder",
+    "speaker": "Various",
+    "pronouns": "",
+    "user_id": 0,
+    "description": "EMF Camp Schedule is not yet available in JSON format. The timetable generation has not yet happened.",
+    "type": "talk", "video_privacy": "public", "is_family_friendly": true, "is_from_cfp": false, "content_note": "", "source": "database", "video": {"recording_lost": null}, "start_time": "09:00", "end_time": "23:59"}
+]

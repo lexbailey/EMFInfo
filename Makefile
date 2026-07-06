@@ -20,8 +20,9 @@ bin2tap/bin2block: bin2tap/bin2block.hs
 $(ZX0): ZX0/src/zx0.c
 	cd ZX0/src && $(MAKE) zx0
 
-schedule.json:
-	curl -Lo $@ https://www.emfcamp.org/schedule/2024.json
+# TODO reenable when 2026 schedule is available.
+#schedule.json:
+#	curl -Lo $@ https://www.emfcamp.org/schedule/2026.json
 
 # TODO fix the mess around building the events files
 evlist_default.bin strings_default.bin c_lut_default.bin: evbuild_intermediate_pc_linux ;
@@ -66,7 +67,7 @@ main.zxspec48.bin.tap: main.zxspec48.bin bin2tap/bin2tap
 	-rm $@
 	$(ZX0) ./$<
 
-mapzx.bin: map/map_full.scr.zx0 map/map_north.scr.zx0 map/map_south.scr.zx0
+mapzx.bin: map/map_full_2026.scr.zx0 map/map_north_2026.scr.zx0 map/map_south_2026.scr.zx0
 	cat $^ > $@
 
 mapdata.h mapsix.h: map_headers
