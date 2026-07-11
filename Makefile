@@ -85,7 +85,8 @@ emfinfo_zxspec48.tap: preload.tap main.zxspec48.bin.tap mapzx.bin.tap evlist.bin
 %.wav: %.tap
 	tape2wav $< $@
 
-mapdata_six: map/map_full.six map/map_zoom_north.six map/map_zoom_south.six
+# TODO fix sixel map
+mapdata_six: #map/map_full.six map/map_zoom_north.six map/map_zoom_south.six
 	cat $^ > $@
 
 emfinfo_linux: $(main_sources) evbuild_intermediate_pc_linux mapdata_six
