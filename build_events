@@ -7,6 +7,7 @@ import sys
 from unidecode import unidecode
 import argparse
 import subprocess
+import copy
 
 p = argparse.ArgumentParser()
 p.add_argument("target", choices=['PC_LINUX', 'ZXSPEC48', 'PC_MSDOS'])
@@ -140,12 +141,13 @@ def make_event(f, title, venue, name, pronouns, cost, time, duration, type_, can
     if has_cw:
         has_cw_i = 1
     l = 2
-    f.write(bytes([(type_ << 6) | (can_record_i << 5) | ((time>>8) & 0x1f), time & 0xff]))
+    f.write(bytes([((type_&3) << 6) | (can_record_i << 5) | ((time>>8) & 0x1f), time & 0xff]))
     l += 1
     f.write(bytes([duration]))
     b = str_id_bits(strings)
     bits = [0] # filter bit is 0 to start
     bits.extend([has_cw_i])
+    bits.extend([(type_>>2)&1])
     bits.extend(tobits(title, b))
     bits.extend(tobits(venue, b))
     bits.extend(tobits(name, b))
@@ -163,6 +165,10 @@ def type_id(s):
         'performance': 1,
         'workshop': 2,
         'youthworkshop': 3,
+        'film': 4,
+        'djset':5,
+        'meetup':6,
+        'music':7
     }.get(s.lower(), 0)
 
 def ltree_seq():
@@ -197,13 +203,40 @@ def compress(s, lut):
     out.extend(lut.get('\0'))
     return compact(out)
 
+def flatten_one(ev, new_details):
+     ev['start_date'] = new_details['start_date']
+     ev['end_date'] = new_details['end_date']
+     ev['start_time'] = new_details['start_time']
+     ev['end_time'] = new_details['end_time']
+     ev['venue'] = new_details['venue']
+     ev['video_privacy'] = new_details['video_privacy']
+
+def flatten(events):
+    evs = []
+    for ev in events:
+        oc = ev['occurrences']
+        if len(oc) == 1:
+            flatten_one(ev, oc[0])
+            evs.append(ev)
+        else:
+            for o in oc:
+                e2 = copy.deepcopy(ev)
+                flatten_one(e2, o)
+                evs.append(e2)
+    return evs
+    
+
 with open(evlist_name, 'wb+') as f:
+    j = flatten(j)
+    for e in j:
+        if e.get('start_date') is None:
+            print(e)
     sorted_evs = sorted(j, key=lambda e: parsedate(e.get('start_date')))
     all_strings = []
     exceptions = '£'
     ignored = '\r'
     for ev in sorted_evs:
-        for s in ['title', 'venue', 'speaker', 'pronouns', 'cost', 'description']:
+        for s in ['title', 'venue', 'names', 'pronouns', 'cost', 'description']:
             # the content warnings are joined to the description field
             # all other string fields are encoded separately
             cw_text = ''
@@ -228,7 +261,7 @@ with open(evlist_name, 'wb+') as f:
     for ev in sorted_evs:
         dlens.append(len(ev.get('description','')))
         i = lambda n: compress(ev.get(n), lut)
-        prep_event(i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'), i('description'))
+        prep_event(i('title'), i('venue'), i('names'), i('pronouns'), i('cost'), i('description'))
         st = parsedate(ev.get('start_date'))
         if earliest is None or st < earliest:
             earliest = st
@@ -260,7 +293,23 @@ with open(evlist_name, 'wb+') as f:
     f.write(bytes([bps]))
     descr_page_bits = int(math.ceil( math.log2(len(descr_str)) ))
     #2+1+13+8+1+(14 * 5) + 4 + 14
-    ev_size = int(math.ceil(float(((3*8) +1 + (bps * 5) + descr_page_bits + descr_bits)) / 8.0))
+    print(bps, descr_page_bits, descr_bits)
+    print(f"ev_size = int(math.ceil(float(((3*8) +1+1 + (bps * 5) + descr_page_bits + descr_bits)) / 8.0))")
+    print(f"ev_size = int(math.ceil(float(((3*8) +1+1 + ({bps} * 5) + {descr_page_bits} + {descr_bits})) / 8.0))")
+    ev_size = int(math.ceil(float( (
+        # Packet size in bits
+        +2  # Type &3
+        +1  # Can record?
+        +13 # Start time
+        +8  # Duration
+        +1  # Is filtered (always 0 in file)
+        +1  # Has CW
+        +1  # Type >>2 &1
+        +(bps * 5)
+        +descr_page_bits
+        +descr_bits)
+    )/8.0))
+    print(ev_size)
     f.write(bytes([ev_size, day0, len(descr_str)]))
     maxtime = (2**time_bits)-1
     for ind, ev in enumerate(sorted_evs):
@@ -282,7 +331,7 @@ with open(evlist_name, 'wb+') as f:
             descpage += 1
         cw = ev.get('content_note')
         has_cw = cw is not None and cw != ''
-        make_event(f, i('title'), i('venue'), i('speaker'), i('pronouns'), i('cost'), time, duration, type_, can_record, descpage, i('description'), has_cw)
+        make_event(f, i('title'), i('venue'), i('names'), i('pronouns'), i('cost'), time, duration, type_, can_record, descpage, i('description'), has_cw)
 
 with open(strings_name, 'wb+') as f:
     for (p,s) in strings:

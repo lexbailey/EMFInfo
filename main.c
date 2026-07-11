@@ -37,13 +37,18 @@ uifunc credits(char, char);
 uifunc mode = (uifunc)menu;
 
 char *evstr[] = {
-    "Talk", "Performance", "Workshop", "Youth Workshop"
+    "Talk", "Performance", "Workshop", "Youth Workshop", "Film", "DJ Set", "Meetup", "Music"
+
 };
 char *evcol[] = {
     BG_BLUE FG_CYAN,
     BG_BLUE FG_RED,
     BG_BLUE FG_YELLOW,
-    BG_BLUE FG_GREEN
+    BG_BLUE FG_GREEN,
+    BG_BLUE FG_WHITE,
+    BG_BLUE FG_WHITE,
+    BG_BLUE FG_YELLOW,
+    BG_BLUE FG_WHITE
 };
 
 char *daynames[] = {
@@ -170,6 +175,7 @@ void bgblack(){
 
 #ifndef CUSTOM_LOAD_DESCS
     void load_descs(unsigned char n){
+        unsigned char target = n;
         static char desc_file_name[FNAME_MAXLEN+1];
         #ifdef NO_SPRINTF
             char *desc_pos = desc_file_name;
@@ -198,7 +204,7 @@ void bgblack(){
             #endif
         #endif
         if (load_data(descs_base, &descs_len, desc_file_name) == 1){
-            descs_loaded = n;
+            descs_loaded = target;
         }
     }
 #endif
@@ -295,6 +301,7 @@ event_t get_event(unsigned int index){
     ev.duration = IBITS(8);
     /*ev.filtered = */CBITS(1);
     ev.has_cw = CBITS(1);
+    ev.type += CBITS(1)<<2; // extra type bit, new for 2026
     ev.title = PBITS(str_bit_len);
     ev.venue = PBITS(str_bit_len);
     ev.name = PBITS(str_bit_len);
@@ -324,7 +331,10 @@ unsigned int get_event_time(unsigned int index){
 unsigned char get_event_type(unsigned int index){
     char *p = events_base + EV_HEADER_LEN + mul(index, ev_size);
     BITSTREAM_INIT(p)
-    return CBITS(2);
+    char ty = CBITS(2);
+    IBITS(24);
+    ty += CBITS(1)<<2;
+    return ty;
 }
 
 // finds the filter bit for the given event index
@@ -1025,7 +1035,7 @@ uifunc timetable(char changed, char key){
         }
         if (key == 'f'){
             filt_type++;
-            if (filt_type > 3){
+            if (filt_type > 7){
                 filt_type = 0xff;
             }
             return timetable(1,0);

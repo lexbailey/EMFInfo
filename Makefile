@@ -20,9 +20,8 @@ bin2tap/bin2block: bin2tap/bin2block.hs
 $(ZX0): ZX0/src/zx0.c
 	cd ZX0/src && $(MAKE) zx0
 
-# TODO reenable when 2026 schedule is available.
-#schedule.json:
-#	curl -Lo $@ https://www.emfcamp.org/schedule/2026.json
+schedule.json:
+	curl -Lo $@ https://www.emfcamp.org/schedule/2026.json
 
 # TODO fix the mess around building the events files
 evlist_default.bin strings_default.bin c_lut_default.bin: evbuild_intermediate_pc_linux ;
